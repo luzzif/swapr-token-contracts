@@ -62,10 +62,9 @@ task(
             );
 
             // funding the claimer
-            await swpr.transfer(
-                swprClaimer.address,
-                BigNumber.from(claimerFunding)
-            );
+            await swpr
+                .connect(signer)
+                .transfer(swprClaimer.address, BigNumber.from(claimerFunding));
 
             if (verify) {
                 await new Promise((resolve) => {

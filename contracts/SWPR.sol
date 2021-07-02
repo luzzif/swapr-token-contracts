@@ -10,6 +10,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
  */
 contract SWPR is ERC20 {
     constructor(address _dxDaoAddress) public ERC20("Swapr", "SWPR") {
-        _mint(_dxDaoAddress, 100000000);
+        _mint(_dxDaoAddress, 100000000 ether);
     }
 }

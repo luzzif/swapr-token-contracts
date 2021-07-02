@@ -24,6 +24,52 @@ describe("SWPRClaimer", () => {
             swprClaimer
                 .connect(claimerAccount)
                 .claim(100, [formatBytes32String("fake-proof")])
+        ).to.be.revertedWith("SC04");
+    });
+
+    it("should fail when claim is called 2 times", async () => {
+        const { initialHolderAccount, claimerAccount, swpr } =
+            await loadFixture(fixture);
+        const claimerAddress = await claimerAccount.getAddress();
+        const leaves = [
+            { account: claimerAddress, amount: "100" },
+            { account: Wallet.createRandom().address, amount: "200" },
+            { account: Wallet.createRandom().address, amount: "300" },
+            { account: Wallet.createRandom().address, amount: "500" },
+        ];
+        const tree = new MerkleTree(leaves);
+
+        // deploying claimer
+        const swprClaimer = (await deployContract(
+            initialHolderAccount,
+            swprClaimerJson,
+            [swpr.address, tree.root]
+        )) as SWPRClaimer;
+
+        // funding claimer
+        const initialClaimerFunding = "1100";
+        await swpr
+            .connect(initialHolderAccount)
+            .transfer(swprClaimer.address, initialClaimerFunding);
+
+        expect(await swpr.balanceOf(claimerAddress)).to.be.equal(0);
+        expect(await swpr.balanceOf(swprClaimer.address)).to.be.equal(
+            initialClaimerFunding
+        );
+
+        // performing the claim
+        const claimerConnectedSwprClaimer = swprClaimer.connect(claimerAccount);
+        await claimerConnectedSwprClaimer.claim(
+            leaves[0].amount,
+            tree.getProof(leaves[0])
+        );
+
+        // performing a claim the second time should revert
+        await expect(
+            claimerConnectedSwprClaimer.claim(
+                leaves[0].amount,
+                tree.getProof(leaves[0])
+            )
         ).to.be.revertedWith("SC03");
     });
 
