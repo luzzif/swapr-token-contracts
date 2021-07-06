@@ -2,8 +2,16 @@ import { getWhitelistMoreThanOneSwaprTrade } from "./two-swapr-trades";
 import { getWhitelistLiquidityProviders } from "./liquidity-providers";
 import { getWhitelistUniswapOnArbitrumYes } from "./uniswap-on-arbitrum-yes-voters";
 import { getWhitelistMoreThanOneBanklessDaoVote } from "./two-bankless-dao-votes";
+import { getWhitelistOmenUsers } from "./omen-users";
 
 const createWhitelist = async () => {
+    const omenUsersWhitelist = await getWhitelistOmenUsers();
+    console.log(
+        `number of addresses that used omen: ${omenUsersWhitelist.length}`
+    );
+
+    console.log();
+
     const uniswapOnArbitrumYesWhitelist =
         await getWhitelistUniswapOnArbitrumYes();
     console.log(

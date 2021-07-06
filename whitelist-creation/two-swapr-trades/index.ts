@@ -6,10 +6,10 @@ import {
 } from "../commons";
 
 const SWAPS_QUERY = gql`
-    query getSwaps($upperTimeBound: BigInt!, $lastId: ID) {
+    query getSwaps( $lastId: ID) {
         swaps(
             where: {
-                timestamp_lt: $upperTimeBound
+                timestamp_lt: ${DATA_TIME_LIMIT}
                 id_gt: $lastId
                 from_not_in: [
                     "0x65f29020d07a6cfa3b0bf63d749934d5a6e6ea18"
@@ -37,7 +37,6 @@ const getSubgraphData = async (
     while (!allFound) {
         const result = await subgraphClient.request<QueryResult>(SWAPS_QUERY, {
             lastId,
-            upperTimeBound: DATA_TIME_LIMIT,
         });
         lastId = result.swaps[result.swaps.length - 1].id;
         data.push(...result.swaps);
