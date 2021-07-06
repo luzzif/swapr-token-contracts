@@ -1,28 +1,56 @@
-import fs from "fs";
+import { gql } from "graphql-request";
+import { SNAPSHOT_CLIENT } from "../commons";
 
-// uses the report downloaded from https://snapshot.org/#/uniswap/proposal/Qmehop1NNWP9VEf7tGLEAYRphVsXtdxkL7oKEhaXL2Xao6
+const VOTES_QUERY = gql`
+    query getVotes($skip: Int!) {
+        votes(
+            first: 1000
+            skip: $skip
+            where: {
+                proposal: "Qmehop1NNWP9VEf7tGLEAYRphVsXtdxkL7oKEhaXL2Xao6"
+            }
+        ) {
+            choice
+            voter
+        }
+    }
+`;
+
+interface Vote {
+    choice: number;
+    voter: string;
+}
+
+interface VotesQueryResult {
+    votes: Vote[];
+}
+
+const getSubgraphData = async (): Promise<Vote[]> => {
+    let allFound = false;
+    let skip = 0;
+    let votes: Vote[] = [];
+    while (!allFound) {
+        const result = await SNAPSHOT_CLIENT.request<VotesQueryResult>(
+            VOTES_QUERY,
+            { skip }
+        );
+        skip += 1000;
+        votes.push(...result.votes);
+        if (result.votes.length < 1000) {
+            allFound = true;
+        }
+    }
+    return votes;
+};
+
+// gets accounts who made 2 or more swapr trade until June 1st (valid for both xDai and mainnet)
 export const getWhitelistUniswapOnArbitrumYes = async () => {
-    const voters = new Set<string>();
+    console.log("fetching uniswap on arbitrum votes");
+    const votes = await getSubgraphData();
+    console.log(`fetched ${votes.length} votes`);
 
-    const allVotersRaw = (
-        await fs.readFileSync(
-            `${__dirname}/snapshot-report-uniswap-on-arbitrum.csv`
-        )
-    )
-        .toString()
-        .split("\n");
+    const yesVotes = votes.filter((vote) => vote.choice === 1); // first choice was yes
+    console.log(`filtered out ${votes.length - yesVotes.length} no votes`);
 
-    allVotersRaw.shift(); // remove header line
-
-    allVotersRaw
-        .map((row) => {
-            const [voter, choice] = row.split(",");
-            return { voter, votedInFavor: choice === "1" };
-        })
-        .filter((wrappedVoter) => wrappedVoter.votedInFavor)
-        .forEach((wrappedVoter) => {
-            voters.add(wrappedVoter.voter); // removes any eventual duplicate
-        });
-
-    return Array.from(voters);
+    return yesVotes;
 };
