@@ -1,17 +1,24 @@
-import { getWhitelistEqualOrMoreThan2SwaprTrades } from "./2-swapr-trades";
+import { getWhitelistMoreThanOneSwaprTrade } from "./two-swapr-trades";
 import { getWhitelistLiquidityProviders } from "./liquidity-providers";
 import { getWhitelistUniswapOnArbitrumYes } from "./uniswap-on-arbitrum-yes-voters";
+import { getWhitelistMoreThanOneBanklessDaoVote } from "./two-bankless-dao-votes";
 
 const createWhitelist = async () => {
+    const moreThanOneBanklessDaoVoteWhitelist =
+        await getWhitelistMoreThanOneBanklessDaoVote();
+    console.log(
+        `number of addresses that voted more than once on bankless dao: ${moreThanOneBanklessDaoVoteWhitelist.length}`
+    );
+
     const positiveVotersWhitelist = await getWhitelistUniswapOnArbitrumYes();
     console.log(
         `number of addresses that voted for uniswap to be on arbitrum: ${positiveVotersWhitelist.length}`
     );
 
-    const moreThan2SwapsWhitelist =
-        await getWhitelistEqualOrMoreThan2SwaprTrades();
+    const moreThanOneSwaprSwapWhitelist =
+        await getWhitelistMoreThanOneSwaprTrade();
     console.log(
-        `number of addresses with more than 1 swap on swapr: ${moreThan2SwapsWhitelist.length}`
+        `number of addresses with more than one swap on swapr: ${moreThanOneSwaprSwapWhitelist.length}`
     );
 
     const liquidityProvidersWhitelist = await getWhitelistLiquidityProviders();

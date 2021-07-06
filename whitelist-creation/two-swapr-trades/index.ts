@@ -49,7 +49,7 @@ const getSubgraphData = async (
 };
 
 // gets accounts who made 2 or more swapr trade until June 1st (valid for both xDai and mainnet)
-export const getWhitelistEqualOrMoreThan2SwaprTrades = async () => {
+export const getWhitelistMoreThanOneSwaprTrade = async () => {
     console.log("fetching mainnet swaps");
     const mainnetSwaps = await getSubgraphData(SWAPR_MAINNET_SUBGRAPH_CLIENT);
     console.log(`fetched ${mainnetSwaps.length} mainnet swaps`);

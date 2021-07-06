@@ -266,18 +266,18 @@
     minimatch "^3.0.4"
     strip-json-comments "^3.1.1"
 
-"@ethereum-waffle/chai@^3.3.0":
-  version "3.3.1"
-  resolved "https://registry.yarnpkg.com/@ethereum-waffle/chai/-/chai-3.3.1.tgz#3f20b810d0fa516f19af93c50c3be1091333fa8e"
-  integrity sha512-+vepCjttfOzCSnmiVEmd1bR8ctA2wYVrtWa8bDLhnTpj91BIIHotNDTwpeq7fyjrOCIBTN3Ai8ACfjNoatc4OA==
+"@ethereum-waffle/chai@^3.4.0":
+  version "3.4.0"
+  resolved "https://registry.yarnpkg.com/@ethereum-waffle/chai/-/chai-3.4.0.tgz#2477877410a96bf370edd64df905b04fb9aba9d5"
+  integrity sha512-GVaFKuFbFUclMkhHtQTDnWBnBQMJc/pAbfbFj/nnIK237WPLsO3KDDslA7m+MNEyTAOFrcc0CyfruAGGXAQw3g==
   dependencies:
-    "@ethereum-waffle/provider" "^3.3.1"
+    "@ethereum-waffle/provider" "^3.4.0"
     ethers "^5.0.0"
 
-"@ethereum-waffle/compiler@^3.3.0":
-  version "3.3.1"
-  resolved "https://registry.yarnpkg.com/@ethereum-waffle/compiler/-/compiler-3.3.1.tgz#946128fd565aa4347075fd716dbd0f3f38189280"
-  integrity sha512-X/TeQugt94AQwXEdCjIQxcXYGawNulVBYEBE7nloj4wE/RBxNolXwjoVNjcS4kuiMMbKkdO0JkL5sn6ixx8bDg==
+"@ethereum-waffle/compiler@^3.4.0":
+  version "3.4.0"
+  resolved "https://registry.yarnpkg.com/@ethereum-waffle/compiler/-/compiler-3.4.0.tgz#68917321212563544913de33e408327745cb1284"
+  integrity sha512-a2wxGOoB9F1QFRE+Om7Cz2wn+pxM/o7a0a6cbwhaS2lECJgFzeN9xEkVrKahRkF4gEfXGcuORg4msP0Asxezlw==
   dependencies:
     "@resolver-engine/imports" "^0.3.3"
     "@resolver-engine/imports-fs" "^0.3.3"
@@ -286,34 +286,34 @@
     "@types/node-fetch" "^2.5.5"
     ethers "^5.0.1"
     mkdirp "^0.5.1"
-    node-fetch "^2.6.0"
+    node-fetch "^2.6.1"
     solc "^0.6.3"
     ts-generator "^0.1.1"
     typechain "^3.0.0"
 
-"@ethereum-waffle/ens@^3.2.4":
-  version "3.2.4"
-  resolved "https://registry.yarnpkg.com/@ethereum-waffle/ens/-/ens-3.2.4.tgz#c486be4879ea7107e1ff01b24851a5e44f5946ce"
-  integrity sha512-lkRVPCEkk7KOwH9MqFMB+gL0X8cZNsm+MnKpP9CNbAyhFos2sCDGcY8t6BA12KBK6pdMuuRXPxYL9WfPl9bqSQ==
+"@ethereum-waffle/ens@^3.3.0":
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/@ethereum-waffle/ens/-/ens-3.3.0.tgz#d54f4c8e6b7bcafdc13ab294433f45416b2b2791"
+  integrity sha512-zVIH/5cQnIEgJPg1aV8+ehYicpcfuAisfrtzYh1pN3UbfeqPylFBeBaIZ7xj/xYzlJjkrek/h9VfULl6EX9Aqw==
   dependencies:
     "@ensdomains/ens" "^0.4.4"
     "@ensdomains/resolver" "^0.2.4"
     ethers "^5.0.1"
 
-"@ethereum-waffle/mock-contract@^3.2.2":
-  version "3.2.2"
-  resolved "https://registry.yarnpkg.com/@ethereum-waffle/mock-contract/-/mock-contract-3.2.2.tgz#5749b03cbb4850150f81cf66151c4523eb7436f0"
-  integrity sha512-H60Cc5C7sYNU4LuPMSKDh8YIaN9/fkwEjznY78CEbOosO+lMlFYdA+5VZjeDGDuYKfsBqsocQdkj1CRyoi1KNw==
+"@ethereum-waffle/mock-contract@^3.3.0":
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/@ethereum-waffle/mock-contract/-/mock-contract-3.3.0.tgz#7b331f1c95c5d46ee9478f7a6be2869f707d307a"
+  integrity sha512-apwq0d+2nQxaNwsyLkE+BNMBhZ1MKGV28BtI9WjD3QD2Ztdt1q9II4sKA4VrLTUneYSmkYbJZJxw89f+OpJGyw==
   dependencies:
     "@ethersproject/abi" "^5.0.1"
     ethers "^5.0.1"
 
-"@ethereum-waffle/provider@^3.3.0", "@ethereum-waffle/provider@^3.3.1":
-  version "3.3.2"
-  resolved "https://registry.yarnpkg.com/@ethereum-waffle/provider/-/provider-3.3.2.tgz#33677baf6af5cbb087c3072d84f38c152968ebb1"
-  integrity sha512-ilz6cXK0ylSKCmZktTMpY4gjo0CN6rb86JfN7+RZYk6tKtZA6sXoOe95skWEQkGf1fZk7G817fTzLb0CmFDp1g==
+"@ethereum-waffle/provider@^3.4.0":
+  version "3.4.0"
+  resolved "https://registry.yarnpkg.com/@ethereum-waffle/provider/-/provider-3.4.0.tgz#a36a0890d4fbc230e807870c8d3b683594efef00"
+  integrity sha512-QgseGzpwlzmaHXhqfdzthCGu5a6P1SBF955jQHf/rBkK1Y7gGo2ukt3rXgxgfg/O5eHqRU+r8xw5MzVyVaBscQ==
   dependencies:
-    "@ethereum-waffle/ens" "^3.2.4"
+    "@ethereum-waffle/ens" "^3.3.0"
     ethers "^5.0.1"
     ganache-core "^2.13.2"
     patch-package "^6.2.2"
@@ -762,10 +762,10 @@
   dependencies:
     "@ethersproject/logger" "^5.1.0"
 
-"@ethersproject/networks@5.4.0", "@ethersproject/networks@^5.4.0":
-  version "5.4.0"
-  resolved "https://registry.yarnpkg.com/@ethersproject/networks/-/networks-5.4.0.tgz#71eecd3ef3755118b42c1a5d2a44a7e07202e10a"
-  integrity sha512-5fywtKRDcnaVeA5SjxXH3DOQqe/IbeD/plwydi94SdPps1fbDUrnO6SzDExaruBZXxpxJcO9upG9UComsei4bg==
+"@ethersproject/networks@5.4.1", "@ethersproject/networks@^5.4.0":
+  version "5.4.1"
+  resolved "https://registry.yarnpkg.com/@ethersproject/networks/-/networks-5.4.1.tgz#2ce83b8e42aa85216e5d277a7952d97b6ce8d852"
+  integrity sha512-8SvowCKz9Uf4xC5DTKI8+il8lWqOr78kmiqAVLYT9lzB8aSmJHQMD1GSuJI0CW4hMAnzocpGpZLgiMdzsNSPig==
   dependencies:
     "@ethersproject/logger" "^5.4.0"
 
@@ -824,10 +824,10 @@
     bech32 "1.1.4"
     ws "7.2.3"
 
-"@ethersproject/providers@5.4.0":
-  version "5.4.0"
-  resolved "https://registry.yarnpkg.com/@ethersproject/providers/-/providers-5.4.0.tgz#1b9eeaf394d790a662ec66373d7219c82f4433f2"
-  integrity sha512-XRmI9syLnkNdLA8ikEeg0duxmwSWTTt9S+xabnTOyI51JPJyhQ0QUNT+wvmod218ebb7rLupHDPQ7UVe2/+Tjg==
+"@ethersproject/providers@5.4.1":
+  version "5.4.1"
+  resolved "https://registry.yarnpkg.com/@ethersproject/providers/-/providers-5.4.1.tgz#654267b563b833046b9c9647647cfc8267cb93b4"
+  integrity sha512-p06eiFKz8nu/5Ju0kIX024gzEQIgE5pvvGrBCngpyVjpuLtUIWT3097Agw4mTn9/dEA0FMcfByzFqacBMSgCVg==
   dependencies:
     "@ethersproject/abstract-provider" "^5.4.0"
     "@ethersproject/abstract-signer" "^5.4.0"
@@ -4133,15 +4133,15 @@ ethereum-cryptography@^0.1.2, ethereum-cryptography@^0.1.3:
     secp256k1 "^4.0.1"
     setimmediate "^1.0.5"
 
-ethereum-waffle@^3.3.0:
-  version "3.3.0"
-  resolved "https://registry.yarnpkg.com/ethereum-waffle/-/ethereum-waffle-3.3.0.tgz#166a0cc1d3b2925f117b20ef0951b3fe72e38e79"
-  integrity sha512-4xm3RWAPCu5LlaVxYEg0tG3L7g5ovBw1GY/UebrzZ+OTx22vcPjI+bvelFlGBpkdnO5yOIFXjH2eK59tNAe9IA==
+ethereum-waffle@^3.4.0:
+  version "3.4.0"
+  resolved "https://registry.yarnpkg.com/ethereum-waffle/-/ethereum-waffle-3.4.0.tgz#990b3c6c26db9c2dd943bf26750a496f60c04720"
+  integrity sha512-ADBqZCkoSA5Isk486ntKJVjFEawIiC+3HxNqpJqONvh3YXBTNiRfXvJtGuAFLXPG91QaqkGqILEHANAo7j/olQ==
   dependencies:
-    "@ethereum-waffle/chai" "^3.3.0"
-    "@ethereum-waffle/compiler" "^3.3.0"
-    "@ethereum-waffle/mock-contract" "^3.2.2"
-    "@ethereum-waffle/provider" "^3.3.0"
+    "@ethereum-waffle/chai" "^3.4.0"
+    "@ethereum-waffle/compiler" "^3.4.0"
+    "@ethereum-waffle/mock-contract" "^3.3.0"
+    "@ethereum-waffle/provider" "^3.4.0"
     ethers "^5.0.1"
 
 ethereumjs-abi@0.6.5:
@@ -4415,10 +4415,10 @@ ethers@^5.0.0, ethers@^5.0.1, ethers@^5.0.2:
     "@ethersproject/web" "5.1.0"
     "@ethersproject/wordlists" "5.1.0"
 
-ethers@^5.4.0:
-  version "5.4.0"
-  resolved "https://registry.yarnpkg.com/ethers/-/ethers-5.4.0.tgz#e9fe4b39350bcce5edd410c70bd57ba328ecf474"
-  integrity sha512-hqN1x0CV8VMpQ25WnNEjaMqtB3nA4DRAb2FSmmNaUbD1dF6kWbHs8YaXbVvD37FCg3GTEyc4rV9Pxafk1ByHKw==
+ethers@^5.4.1:
+  version "5.4.1"
+  resolved "https://registry.yarnpkg.com/ethers/-/ethers-5.4.1.tgz#bcff1e9f45bf1a061bf313ec04e8d9881d2d53f9"
+  integrity sha512-SrcddMdCgP1hukDvCPd87Aipbf4NWjQvdfAbZ65XSZGbfyuYPtIrUJPDH5B1SBRsdlfiEgX3eoz28DdBDzMNFg==
   dependencies:
     "@ethersproject/abi" "5.4.0"
     "@ethersproject/abstract-provider" "5.4.0"
@@ -4435,10 +4435,10 @@ ethers@^5.4.0:
     "@ethersproject/json-wallets" "5.4.0"
     "@ethersproject/keccak256" "5.4.0"
     "@ethersproject/logger" "5.4.0"
-    "@ethersproject/networks" "5.4.0"
+    "@ethersproject/networks" "5.4.1"
     "@ethersproject/pbkdf2" "5.4.0"
     "@ethersproject/properties" "5.4.0"
-    "@ethersproject/providers" "5.4.0"
+    "@ethersproject/providers" "5.4.1"
     "@ethersproject/random" "5.4.0"
     "@ethersproject/rlp" "5.4.0"
     "@ethersproject/sha2" "5.4.0"
@@ -7164,7 +7164,7 @@ node-fetch@2.1.2:
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.1.2.tgz#ab884e8e7e57e38a944753cec706f788d1768bb5"
   integrity sha1-q4hOjn5X44qUR1POxwb3iNF2i7U=
 
-node-fetch@2.6.1, node-fetch@^2.6.0:
+node-fetch@2.6.1, node-fetch@^2.6.0, node-fetch@^2.6.1:
   version "2.6.1"
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.1.tgz#045bd323631f76ed2e2b55573394416b639a0052"
   integrity sha512-V4aYg89jEoVRxRb2fJdAg8FHvI7cEyYdVAh94HH0UIK8oJxUfkjlDQN9RbMx+bEjP7+ggMiFRprSti032Oipxw==
