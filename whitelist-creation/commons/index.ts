@@ -34,6 +34,14 @@ export const SNAPSHOT_CLIENT = new GraphQLClient(
     "https://hub.snapshot.page/graphql"
 );
 
+export const POAP_XDAI_SUBGRAPH_CLIENT = new GraphQLClient(
+    "https://api.thegraph.com/subgraphs/name/poap-xyz/poap-xdai"
+);
+
+export const POAP_MAINNET_SUBGRAPH_CLIENT = new GraphQLClient(
+    "https://api.thegraph.com/subgraphs/name/poap-xyz/poap"
+);
+
 export const MAINNET_PROVIDER = new ethers.providers.AlchemyProvider(
     "mainnet",
     "b0J9XCEKwD1oWmA14bbtTfnZk9N8vCF-"
@@ -50,6 +58,8 @@ export const DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK = BigNumber.from("12737970"); //
 export const DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK = BigNumber.from("16850349"); // block published on July-01-2021 12:07:20 AM +2 UTC
 export const DXD_MAINNET_ADDRESS = "0xa1d65E8fB6e87b60FECCBc582F7f97804B725521";
 export const DXD_XDAI_ADDRESS = "0xb90D6bec20993Be5d72A5ab353343f7a0281f158";
+export const XSDT_MAINNET_ADDRESS =
+    "0xac14864ce5a98af3248ffbf549441b04421247d3";
 
 export const saveCache = (addresses: string[], location: string) => {
     fs.writeFileSync(location, JSON.stringify(addresses, null, 4));
