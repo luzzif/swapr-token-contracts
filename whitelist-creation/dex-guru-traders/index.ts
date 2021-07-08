@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 import fetch from "node-fetch";
-import { DATA_TIME_LIMIT } from "../commons";
+import { DATA_TIME_LIMIT, logInPlace } from "../commons";
 
 interface Trader {
     address: string;
@@ -32,12 +32,17 @@ export const getWhitelistDexGuruTraders = async () => {
             throw new Error("could not fetch dex.guru traders data");
         const json = (await response.json()) as DexGuruApiResponse;
         pageCount = json.pageCount;
-        console.log(`fetched page ${page}/${pageCount} of dex.guru traders`);
+        logInPlace(`fetched dex.guru traders page ${page}/${pageCount}`);
 
         json.traders
             .filter((trader) => trader.stats.tradeCount.taker > 2)
             .forEach((trader) => traders.add(trader.address));
     } while (page < pageCount);
 
-    return Array.from(traders);
+    console.log();
+    const tradersArray = Array.from(traders);
+    console.log(
+        `number of addresses that traded more than twice on dex.guru: ${tradersArray.length}`
+    );
+    return tradersArray;
 };

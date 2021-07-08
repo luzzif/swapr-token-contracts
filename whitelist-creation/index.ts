@@ -4,13 +4,12 @@ import { getWhitelistUniswapOnArbitrumYes } from "./uniswap-on-arbitrum-yes-vote
 import { getWhitelistMoreThanOneBanklessDaoVote } from "./two-bankless-dao-votes";
 import { getWhitelistOmenUsers } from "./omen-users";
 import { getWhitelistDexGuruTraders } from "./dex-guru-traders";
+import { getWhitelistDxdHolders } from "./dxd-holders";
 
 const createWhitelist = async () => {
+    const dxdHoldersWhitelist = await getWhitelistDxdHolders();
+    console.log();
     const dexGuruWhitelist = await getWhitelistDexGuruTraders();
-    console.log(
-        `number of addresses that traded more than twice on dex.guru: ${dexGuruWhitelist.length}`
-    );
-
     console.log();
 
     const omenUsersWhitelist = await getWhitelistOmenUsers();
