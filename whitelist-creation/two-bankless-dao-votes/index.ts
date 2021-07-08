@@ -1,12 +1,19 @@
 import { gql } from "graphql-request";
-import { SNAPSHOT_CLIENT } from "../commons";
+import {
+    loadCache,
+    MARKETING_AIRDROP_TIME_LIMIT,
+    saveCache,
+    SNAPSHOT_CLIENT,
+} from "../commons";
+
+const CACHE_LOCATION = `${__dirname}/cache.json`;
 
 const PROPOSALS_QUERY = gql`
     query getProposals($skip: Int!) {
         proposals(
             first: 1000
             skip: $skip
-            where: { space: "banklessvault.eth" }
+            where: { space: "banklessvault.eth", created_lte: ${MARKETING_AIRDROP_TIME_LIMIT} }
         ) {
             id
         }
@@ -76,13 +83,20 @@ const getSubgraphData = async (): Promise<Vote[]> => {
     return votes;
 };
 
-// gets accounts who made 2 or more swapr trade until June 1st (valid for both xDai and mainnet)
 export const getWhitelistMoreThanOneBanklessDaoVote = async () => {
+    let eligibleVoters = loadCache(CACHE_LOCATION);
+    if (eligibleVoters.length > 0) {
+        console.log(
+            `number of voters from cache that voted more than once: ${eligibleVoters.length}`
+        );
+        return eligibleVoters;
+    }
+
     console.log("fetching bankless dao votes");
     const votes = await getSubgraphData();
     console.log(`fetched ${votes.length} votes`);
 
-    return Object.entries(
+    eligibleVoters = Object.entries(
         votes.reduce((accumulator: { [voter: string]: number }, vote) => {
             const { voter } = vote;
             accumulator[voter] = (accumulator[voter] || 0) + 1;
@@ -93,4 +107,10 @@ export const getWhitelistMoreThanOneBanklessDaoVote = async () => {
         accumulator.push(swapper);
         return accumulator;
     }, []);
+
+    console.log(
+        `number of addresses that voted more than once on bankless dao: ${eligibleVoters.length}`
+    );
+    saveCache(eligibleVoters, CACHE_LOCATION);
+    return eligibleVoters;
 };

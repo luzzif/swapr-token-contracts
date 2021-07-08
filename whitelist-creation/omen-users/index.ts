@@ -1,9 +1,10 @@
 // taken from https://github.com/hexyls/omen-airdrop/blob/master/index.js
 
-import { DATA_TIME_LIMIT } from "../commons";
+import { loadCache, MARKETING_AIRDROP_TIME_LIMIT, saveCache } from "../commons";
+import { request, gql } from "graphql-request";
+import { ethers, utils } from "ethers";
 
-const { request, gql } = require("graphql-request");
-const { ethers, utils } = require("ethers");
+const CACHE_LOCATION = `${__dirname}/cache.json`;
 
 const GRAPH_MAINNET_HTTP =
     "https://api.thegraph.com/subgraphs/name/protofire/omen";
@@ -13,7 +14,7 @@ const GRAPH_XDAI_HTTP =
 // queries
 const userQuery = gql`
   query Trades($first: Int, $skip: Int) {
-    fpmmTrades(first: $first, skip: $skip, where: { type: "Buy", creationTimestamp_lte: ${DATA_TIME_LIMIT} }) {
+    fpmmTrades(first: $first, skip: $skip, where: { type: "Buy", creationTimestamp_lte: ${MARKETING_AIRDROP_TIME_LIMIT} }) {
       creator {
         id
       }
@@ -24,7 +25,7 @@ const userQuery = gql`
 
 const lpQuery = gql`
   query Lps($first: Int, $skip: Int) {
-    fpmmLiquidities(first: $first, skip: $skip, where: { creationTimestamp_lte: ${DATA_TIME_LIMIT} }) {
+    fpmmLiquidities(first: $first, skip: $skip, where: { creationTimestamp_lte: ${MARKETING_AIRDROP_TIME_LIMIT} }) {
       funder {
         id
       }
@@ -198,8 +199,8 @@ const getOwner = async (proxyAddress: any) => {
     return owner;
 };
 
-const getOwners = async (proxies: any) => {
-    const owners = new Set();
+const getOwners = async (proxies: any): Promise<string[]> => {
+    const owners = new Set<string>();
     await Promise.all(
         proxies.map(async (proxy: any) => {
             const owner = await getOwner(proxy);
@@ -210,23 +211,28 @@ const getOwners = async (proxies: any) => {
 };
 
 export const getWhitelistOmenUsers = async () => {
-    // gather all relevant proxy addresses from mainnet and xdai
-    console.log("\nfetching mainnet addresses");
+    let totalUsers = loadCache(CACHE_LOCATION);
+    if (totalUsers.length > 0) {
+        console.log(
+            `number of omen users from cache that spent more than 25usd: ${totalUsers.length}`
+        );
+        return totalUsers;
+    }
+
+    console.log("fetching mainnet omen user addresses");
     const mainnet = await getAddresses(GRAPH_MAINNET_HTTP, mainnetProvider);
-    console.log("\nfetching xdai addresses");
+    console.log("fetching xdai omen user addresses");
     const xdai = await getAddresses(GRAPH_XDAI_HTTP, xdaiProvider);
 
-    console.log("\nfetching proxy owners for user group");
-    // calc reward per user
+    console.log("fetching proxy owners for all users group");
     const totalUserProxies = Array.from(
-        new Set([...mainnet.users, ...xdai.users])
+        new Set([...mainnet.users, ...xdai.users, ...mainnet.lps, ...xdai.lps])
     );
-    const totalUsers = await getOwners(totalUserProxies);
+    totalUsers = Array.from(new Set(await getOwners(totalUserProxies)));
 
-    console.log("fetching proxy owners for LP group");
-    // calc reward per creator / lp
-    const totalLpProxies = Array.from(new Set([...mainnet.lps, ...xdai.lps]));
-    const totalLps = await getOwners(totalLpProxies);
-
-    return Array.from(new Set([...totalUsers, ...totalLps]));
+    console.log(
+        `number of addresses that spent more than 25 usd on omen: ${totalUsers.length}`
+    );
+    saveCache(totalUsers, CACHE_LOCATION);
+    return totalUsers;
 };

@@ -1,16 +1,23 @@
-import { GraphQLClient, gql } from "graphql-request";
+import { gql } from "graphql-request";
 import {
-    DATA_TIME_LIMIT,
+    getAllDataFromSubgraph,
+    loadCache,
+    MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK,
+    MARKETING_AIRDROP_XDAI_SNAPSHOT_BLOCK,
+    saveCache,
     SWAPR_MAINNET_SUBGRAPH_CLIENT,
     SWAPR_XDAI_SUBGRAPH_CLIENT,
 } from "../commons";
 
-const MINTS_QUERY = gql`
-    query getSwaps($upperTimeBound: BigInt!, $lastId: ID) {
-        mints(
+const CACHE_LOCATION = `${__dirname}/cache.json`;
+
+const LIQUIDITY_POSITIONS_QUERY = gql`
+    query getLiquidityPositions($lastId: ID, $block: Int!) {
+        data: liquidityPositions(
+            first: 1000
+            block: { number: $block }
             where: {
-                timestamp_lt: $upperTimeBound
-                to_not_in: [
+                user_not_in: [
                     # Excluded are the 0 address (to which LP tokens are sent on first mint),
                     # the fee receiver address (obviously not eligible for airdrop) for
                     # both xDai and mainnet, and the DAO's avatar
@@ -20,59 +27,66 @@ const MINTS_QUERY = gql`
                     "0xe716ec63c5673b3a4732d22909b38d779fa47c3f"
                     "0x0000000000000000000000000000000000000000"
                 ]
+                id_gt: $lastId
+                liquidityTokenBalance_gt: 0
             }
-            first: 1000
         ) {
             id
-            to
+            user {
+                id
+            }
         }
     }
 `;
 
-interface Mint {
+interface LiquidityPosition {
     id: string;
-    to: string;
+    user: { id: string };
 }
 
-interface QueryResult {
-    mints: Mint[];
-}
-
-const getSubgraphData = async (
-    subgraphClient: GraphQLClient
-): Promise<Mint[]> => {
-    let allFound = false;
-    let lastId = "";
-    let data = [];
-    while (!allFound) {
-        const result = await subgraphClient.request<QueryResult>(MINTS_QUERY, {
-            lastId,
-            upperTimeBound: DATA_TIME_LIMIT,
-        });
-        lastId = result.mints[result.mints.length - 1].id;
-        data.push(...result.mints);
-        if (result.mints.length < 1000) {
-            allFound = true;
-        }
-    }
-    return data;
-};
-
-// gets accounts who made 2 or more swapr trade until June 1st (valid for both xDai and mainnet)
 export const getWhitelistLiquidityProviders = async () => {
-    console.log("fetching mainnet mints");
-    const mainnetMints = await getSubgraphData(SWAPR_MAINNET_SUBGRAPH_CLIENT);
-    console.log(`fetched ${mainnetMints.length} mainnet mints`);
+    let liquidityProviders = loadCache(CACHE_LOCATION);
+    if (liquidityProviders.length > 0) {
+        console.log(
+            `number of addresses from cache that provided liquidity on swapr: ${liquidityProviders.length}`
+        );
+        return liquidityProviders;
+    }
 
-    console.log("fetching xDai mints");
-    const xDaiMints = await getSubgraphData(SWAPR_XDAI_SUBGRAPH_CLIENT);
-    console.log(`fetched ${xDaiMints.length} xDai mints`);
+    console.log("fetching mainnet swapr liquidity positions");
+    const mainnetLiquidityPositions =
+        await getAllDataFromSubgraph<LiquidityPosition>(
+            SWAPR_MAINNET_SUBGRAPH_CLIENT,
+            LIQUIDITY_POSITIONS_QUERY,
+            { block: MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK }
+        );
+    console.log(
+        `fetched ${mainnetLiquidityPositions.length} mainnet swapr liquidity positions`
+    );
 
-    const allMints = mainnetMints.concat(xDaiMints);
+    console.log("fetching xdai swapr liquidity positions");
+    const xDaiLiquidityPositions =
+        await getAllDataFromSubgraph<LiquidityPosition>(
+            SWAPR_XDAI_SUBGRAPH_CLIENT,
+            LIQUIDITY_POSITIONS_QUERY,
+            { block: MARKETING_AIRDROP_XDAI_SNAPSHOT_BLOCK }
+        );
+    console.log(
+        `fetched ${xDaiLiquidityPositions.length} xdai swapr liquidity positions`
+    );
 
-    const liquidityProviders = new Set<string>();
-    allMints.forEach((mint) => {
-        liquidityProviders.add(mint.to);
-    });
-    return Array.from(liquidityProviders);
+    liquidityProviders = Array.from(
+        new Set<string>(
+            mainnetLiquidityPositions
+                .map((position) => position.user.id)
+                .concat(
+                    xDaiLiquidityPositions.map((position) => position.user.id)
+                )
+        )
+    );
+    console.log(
+        `number of addresses that provided liquidity on swapr: ${liquidityProviders.length}`
+    );
+    saveCache(liquidityProviders, CACHE_LOCATION);
+    return liquidityProviders;
 };

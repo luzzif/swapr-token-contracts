@@ -1,6 +1,11 @@
 import { DateTime } from "luxon";
 import fetch from "node-fetch";
-import { DATA_TIME_LIMIT, logInPlace } from "../commons";
+import {
+    loadCache,
+    logInPlace,
+    MARKETING_AIRDROP_TIME_LIMIT,
+    saveCache,
+} from "../commons";
 
 interface Trader {
     address: string;
@@ -13,12 +18,21 @@ interface DexGuruApiResponse {
     traders: Trader[];
 }
 
+const CACHE_LOCATION = `${__dirname}/cache.json`;
+
 export const getWhitelistDexGuruTraders = async () => {
-    const from = DateTime.now()
-        .startOf("year")
-        .startOf("day")
-        .toFormat("yyyy-MM-dd");
-    const to = DateTime.fromSeconds(DATA_TIME_LIMIT).toFormat("yyyy-MM-dd");
+    let tradersArray = loadCache(CACHE_LOCATION);
+    if (tradersArray.length > 0) {
+        console.log(
+            `number of addresses from cache that traded more than twice on dex.guru: ${tradersArray.length}`
+        );
+        return tradersArray;
+    }
+
+    const from = "2021/01/01";
+    const to = DateTime.fromSeconds(MARKETING_AIRDROP_TIME_LIMIT).toFormat(
+        "yyyy-MM-dd"
+    );
 
     let page = 0;
     let pageCount;
@@ -40,9 +54,10 @@ export const getWhitelistDexGuruTraders = async () => {
     } while (page < pageCount);
 
     console.log();
-    const tradersArray = Array.from(traders);
+    tradersArray = Array.from(traders);
     console.log(
         `number of addresses that traded more than twice on dex.guru: ${tradersArray.length}`
     );
+    saveCache(tradersArray, CACHE_LOCATION);
     return tradersArray;
 };

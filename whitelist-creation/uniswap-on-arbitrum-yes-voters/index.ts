@@ -1,5 +1,7 @@
 import { gql } from "graphql-request";
-import { SNAPSHOT_CLIENT } from "../commons";
+import { loadCache, saveCache, SNAPSHOT_CLIENT } from "../commons";
+
+const CACHE_LOCATION = `${__dirname}/cache.json`;
 
 const VOTES_QUERY = gql`
     query getVotes($skip: Int!) {
@@ -43,14 +45,30 @@ const getSubgraphData = async (): Promise<Vote[]> => {
     return votes;
 };
 
-// gets accounts who made 2 or more swapr trade until June 1st (valid for both xDai and mainnet)
 export const getWhitelistUniswapOnArbitrumYes = async () => {
+    let yesVoters = loadCache(CACHE_LOCATION);
+    if (yesVoters.length > 0) {
+        console.log(
+            `number of addresses from cache that voted yes to uniswap on arbitrum: ${yesVoters.length}`
+        );
+        return yesVoters;
+    }
+
     console.log("fetching uniswap on arbitrum votes");
     const votes = await getSubgraphData();
     console.log(`fetched ${votes.length} votes`);
 
-    const yesVotes = votes.filter((vote) => vote.choice === 1); // first choice was yes
-    console.log(`filtered out ${votes.length - yesVotes.length} no votes`);
+    yesVoters = Array.from(
+        new Set<string>(
+            votes
+                .filter((vote) => vote.choice === 1) // first choice was yes
+                .map((vote) => vote.voter)
+        )
+    );
 
-    return yesVotes;
+    console.log(
+        `number of addresses that voted yes to uniswap on arbitrum: ${yesVoters.length}`
+    );
+    saveCache(yesVoters, CACHE_LOCATION);
+    return yesVoters;
 };

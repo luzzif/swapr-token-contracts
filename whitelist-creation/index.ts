@@ -7,53 +7,22 @@ import { getWhitelistDexGuruTraders } from "./dex-guru-traders";
 import { getWhitelistDxdHolders } from "./dxd-holders";
 
 const createWhitelist = async () => {
-    const dxdHoldersWhitelist = await getWhitelistDxdHolders();
+    console.log("fetching marketing airdrop data");
     console.log();
     const dexGuruWhitelist = await getWhitelistDexGuruTraders();
-    console.log();
-
     const omenUsersWhitelist = await getWhitelistOmenUsers();
-    console.log(
-        `number of addresses that used omen: ${omenUsersWhitelist.length}`
-    );
-
-    console.log();
-
     const uniswapOnArbitrumYesWhitelist =
         await getWhitelistUniswapOnArbitrumYes();
-    console.log(
-        `number of addresses that voted yes to uniswap on arbitrum: ${uniswapOnArbitrumYesWhitelist.length}`
-    );
-
-    console.log();
-
     const moreThanOneBanklessDaoVoteWhitelist =
         await getWhitelistMoreThanOneBanklessDaoVote();
-    console.log(
-        `number of addresses that voted more than once on bankless dao: ${moreThanOneBanklessDaoVoteWhitelist.length}`
-    );
-
-    console.log();
-
     const positiveVotersWhitelist = await getWhitelistUniswapOnArbitrumYes();
-    console.log(
-        `number of addresses that voted for uniswap to be on arbitrum: ${positiveVotersWhitelist.length}`
-    );
-
-    console.log();
-
     const moreThanOneSwaprSwapWhitelist =
         await getWhitelistMoreThanOneSwaprTrade();
-    console.log(
-        `number of addresses with more than one swap on swapr: ${moreThanOneSwaprSwapWhitelist.length}`
-    );
-
-    console.log();
-
     const liquidityProvidersWhitelist = await getWhitelistLiquidityProviders();
-    console.log(
-        `number of addresses that have provided liquidity on swapr: ${liquidityProvidersWhitelist.length}`
-    );
+
+    console.log("fetching dxd holders airdrop data");
+    console.log();
+    const dxdHoldersWhitelist = await getWhitelistDxdHolders();
 };
 
 createWhitelist().catch((error) => {

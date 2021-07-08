@@ -6,8 +6,8 @@ import {
     saveCache,
     DXD_MAINNET_ADDRESS,
     DXD_XDAI_ADDRESS,
-    MAINNET_SNAPSHOT_BLOCK,
-    XDAI_SNAPSHOT_BLOCK,
+    DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK,
+    DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK,
 } from "../commons";
 import { getErc20NonZeroTokenHoldersEoaSnapshot } from "../erc20-eoa-snapshot";
 import { getBalancerDxdLiquidityProviders } from "./balancer-lps";
@@ -25,26 +25,26 @@ export const getWhitelistDxdHolders = async () => {
     }
 
     const honeyswapLps = await getHoneyswapDxdLiquidityProviders(
-        XDAI_SNAPSHOT_BLOCK
+        DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK
     );
 
     const sushiswapLps = await getSushiswapDxdLiquidityProviders(
-        MAINNET_SNAPSHOT_BLOCK,
-        XDAI_SNAPSHOT_BLOCK
+        DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK,
+        DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK
     );
 
     const uniswapV2Lps = await getUniswapV2DxdLiquidityProviders(
-        MAINNET_SNAPSHOT_BLOCK
+        DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK
     );
 
     const balancerLps = await getBalancerDxdLiquidityProviders(
-        MAINNET_SNAPSHOT_BLOCK
+        DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK
     );
 
     const xDaiNonZeroDxdHolders = await getErc20NonZeroTokenHoldersEoaSnapshot(
         DXD_XDAI_ADDRESS,
         BigNumber.from("15040609"), // dxd token proxy deployment block
-        XDAI_SNAPSHOT_BLOCK,
+        DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK,
         XDAI_PROVIDER
     );
     console.log(
@@ -56,7 +56,7 @@ export const getWhitelistDxdHolders = async () => {
         await getErc20NonZeroTokenHoldersEoaSnapshot(
             DXD_MAINNET_ADDRESS,
             BigNumber.from("10012634"), // dxd token deployment block
-            MAINNET_SNAPSHOT_BLOCK,
+            DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK,
             MAINNET_PROVIDER
         );
     console.log(

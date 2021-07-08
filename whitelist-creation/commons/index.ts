@@ -43,10 +43,11 @@ export const XDAI_PROVIDER = new ethers.providers.JsonRpcProvider(
     "https://xdai-archive.blockscout.com"
 );
 
-// all the airdrop data is limited to before June 1st
-export const DATA_TIME_LIMIT = 1622498400;
-export const MAINNET_SNAPSHOT_BLOCK = BigNumber.from("12737970"); // block mined on Jun-30-2021 10:00:04 PM +UTC
-export const XDAI_SNAPSHOT_BLOCK = BigNumber.from("16850349"); // block published on July-01-2021 12:07:20 AM +2 UTC
+export const MARKETING_AIRDROP_TIME_LIMIT = 1622505600; // Jun-01-2021 12:00:00 AM UTC
+export const MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK = 12545228; // Jun-01-2021 12:01:20 AM +UTC
+export const MARKETING_AIRDROP_XDAI_SNAPSHOT_BLOCK = 16344348; // June-01-2021 02:01:25 AM +2 UTC
+export const DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK = BigNumber.from("12737970"); // block mined on Jun-30-2021 10:00:04 PM +UTC
+export const DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK = BigNumber.from("16850349"); // block published on July-01-2021 12:07:20 AM +2 UTC
 export const DXD_MAINNET_ADDRESS = "0xa1d65E8fB6e87b60FECCBc582F7f97804B725521";
 export const DXD_XDAI_ADDRESS = "0xb90D6bec20993Be5d72A5ab353343f7a0281f158";
 
