@@ -1,11 +1,14 @@
 import { gql, GraphQLClient } from "graphql-request";
 import {
+    getEoaAddresses,
     loadCache,
+    MAINNET_PROVIDER,
     MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK,
     MARKETING_AIRDROP_XDAI_SNAPSHOT_BLOCK,
     POAP_MAINNET_SUBGRAPH_CLIENT,
     POAP_XDAI_SUBGRAPH_CLIENT,
     saveCache,
+    XDAI_PROVIDER,
 } from "../commons";
 
 const CACHE_LOCATION = `${__dirname}/cache.json`;
@@ -63,19 +66,33 @@ export const getWhitelistPoapHolders = async () => {
         POAP_MAINNET_SUBGRAPH_CLIENT,
         MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK
     );
-    console.log(`fetched ${mainnetHolders.length} mainnet poap holders`);
+    const eoaMainnetHolders = await getEoaAddresses(
+        mainnetHolders,
+        MAINNET_PROVIDER
+    );
+    console.log(
+        `fetched ${eoaMainnetHolders.length} mainnet poap holders (removed ${
+            mainnetHolders.length - eoaMainnetHolders.length
+        } sc holders)`
+    );
 
     console.log("fetching xdai poap holders");
     const xDaiHolders = await getSubgraphData(
         POAP_XDAI_SUBGRAPH_CLIENT,
         MARKETING_AIRDROP_XDAI_SNAPSHOT_BLOCK
     );
-    console.log(`fetched ${xDaiHolders.length} xdai poap holders`);
-
-    poapHolders = Array.from(
-        new Set<string>(mainnetHolders.concat(xDaiHolders))
+    const eoaXdaiHolders = await getEoaAddresses(xDaiHolders, XDAI_PROVIDER);
+    console.log(
+        `fetched ${eoaXdaiHolders.length} xdai poap holders (removed ${
+            xDaiHolders.length - eoaXdaiHolders.length
+        } sc holders)`
     );
-    console.log(`number of addresses that hold poaps: ${poapHolders.length}`);
+    poapHolders = Array.from(
+        new Set<string>(eoaMainnetHolders.concat(eoaXdaiHolders))
+    );
+    console.log(
+        `number of unique addresses that hold poaps: ${poapHolders.length}`
+    );
     saveCache(poapHolders, CACHE_LOCATION);
     return poapHolders;
 };

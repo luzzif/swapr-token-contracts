@@ -1,12 +1,12 @@
 import erc20Abi from "./erc20-abi.json";
 import { Contract, BigNumber, providers, constants } from "ethers";
-import { logInPlace } from "../commons";
+import { getEoaAddresses, logInPlace } from "../commons";
 
 export const getErc20NonZeroTokenHoldersEoaSnapshot = async (
     erc20TokenAddress: string,
     startingBlock: BigNumber,
     endingBlock: BigNumber,
-    provider: providers.BaseProvider
+    provider: providers.JsonRpcProvider
 ): Promise<string[]> => {
     const holdersMap: {
         [address: string]: BigNumber;
@@ -15,7 +15,7 @@ export const getErc20NonZeroTokenHoldersEoaSnapshot = async (
 
     let lastAnalyzedBlock = startingBlock;
     while (lastAnalyzedBlock.lt(endingBlock)) {
-        const toBlock = lastAnalyzedBlock.add(2000);
+        const toBlock = lastAnalyzedBlock.add(10000);
         logInPlace(
             `reconstructing balance map: ${(
                 ((lastAnalyzedBlock.toNumber() - startingBlock.toNumber()) /
@@ -53,6 +53,7 @@ export const getErc20NonZeroTokenHoldersEoaSnapshot = async (
         lastAnalyzedBlock = toBlock;
     }
     logInPlace("reconstructing balance map: 100%");
+    console.log();
 
     const nonZeroHolders = Array.from(
         Object.entries(holdersMap).reduce(
@@ -63,25 +64,12 @@ export const getErc20NonZeroTokenHoldersEoaSnapshot = async (
             new Set<string>()
         )
     );
+    const eoaNonZeroHolders = await getEoaAddresses(nonZeroHolders, provider);
+    console.log(
+        `fetched ${eoaNonZeroHolders.length} holders (${
+            nonZeroHolders.length - eoaNonZeroHolders.length
+        } sc holders removed)`
+    );
 
-    let eoaNonZeroDxdHolders = [];
-    let i = 0;
-    console.log();
-    for (const nonZeroHolder of nonZeroHolders) {
-        const code = await provider.getCode(
-            nonZeroHolder,
-            endingBlock.toHexString()
-        );
-        if (code === "0x") eoaNonZeroDxdHolders.push(nonZeroHolder);
-        i++;
-        logInPlace(
-            `removing smart contracts from holders: ${(
-                (i / nonZeroHolders.length) *
-                100
-            ).toFixed(2)}%`
-        );
-    }
-    console.log();
-
-    return eoaNonZeroDxdHolders;
+    return eoaNonZeroHolders;
 };

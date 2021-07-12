@@ -1,8 +1,10 @@
 import { DateTime } from "luxon";
 import fetch from "node-fetch";
 import {
+    getEoaAddresses,
     loadCache,
     logInPlace,
+    MAINNET_PROVIDER,
     MARKETING_AIRDROP_TIME_LIMIT,
     saveCache,
 } from "../commons";
@@ -21,12 +23,12 @@ interface DexGuruApiResponse {
 const CACHE_LOCATION = `${__dirname}/cache.json`;
 
 export const getWhitelistDexGuruTraders = async () => {
-    let tradersArray = loadCache(CACHE_LOCATION);
-    if (tradersArray.length > 0) {
+    let eoaTraders = loadCache(CACHE_LOCATION);
+    if (eoaTraders.length > 0) {
         console.log(
-            `number of addresses from cache that traded more than twice on dex.guru: ${tradersArray.length}`
+            `number of addresses from cache that traded more than twice on dex.guru: ${eoaTraders.length}`
         );
-        return tradersArray;
+        return eoaTraders;
     }
 
     const from = "2021/01/01";
@@ -52,12 +54,16 @@ export const getWhitelistDexGuruTraders = async () => {
             .filter((trader) => trader.stats.tradeCount.taker > 2)
             .forEach((trader) => traders.add(trader.address));
     } while (page < pageCount);
-
     console.log();
-    tradersArray = Array.from(traders);
+
+    eoaTraders = await getEoaAddresses(Array.from(traders), MAINNET_PROVIDER);
     console.log(
-        `number of addresses that traded more than twice on dex.guru: ${tradersArray.length}`
+        `fetched ${
+            eoaTraders.length
+        } dex.guru traders that traded more than twice (removed ${
+            traders.size - eoaTraders.length
+        } sc traders)`
     );
-    saveCache(tradersArray, CACHE_LOCATION);
-    return tradersArray;
+    saveCache(eoaTraders, CACHE_LOCATION);
+    return eoaTraders;
 };

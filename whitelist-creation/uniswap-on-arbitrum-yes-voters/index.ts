@@ -1,5 +1,11 @@
 import { gql } from "graphql-request";
-import { loadCache, saveCache, SNAPSHOT_CLIENT } from "../commons";
+import {
+    getEoaAddresses,
+    loadCache,
+    MAINNET_PROVIDER,
+    saveCache,
+    SNAPSHOT_CLIENT,
+} from "../commons";
 
 const CACHE_LOCATION = `${__dirname}/cache.json`;
 
@@ -67,7 +73,7 @@ export const getWhitelistUniswapOnArbitrumYes = async () => {
     );
 
     console.log(
-        `number of addresses that voted yes to uniswap on arbitrum: ${yesVoters.length}`
+        `number of unique addresses that voted yes to uniswap on arbitrum: ${yesVoters.length}`
     );
     saveCache(yesVoters, CACHE_LOCATION);
     return yesVoters;

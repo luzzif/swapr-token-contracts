@@ -87,7 +87,7 @@ export const getWhitelistMoreThanOneBanklessDaoVote = async () => {
     let eligibleVoters = loadCache(CACHE_LOCATION);
     if (eligibleVoters.length > 0) {
         console.log(
-            `number of voters from cache that voted more than once: ${eligibleVoters.length}`
+            `number of bankless dao voters from cache that voted more than once: ${eligibleVoters.length}`
         );
         return eligibleVoters;
     }

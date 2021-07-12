@@ -1,6 +1,13 @@
 // taken from https://github.com/hexyls/omen-airdrop/blob/master/index.js
 
-import { loadCache, MARKETING_AIRDROP_TIME_LIMIT, saveCache } from "../commons";
+import {
+    getEoaAddresses,
+    loadCache,
+    MAINNET_PROVIDER,
+    MARKETING_AIRDROP_TIME_LIMIT,
+    saveCache,
+    XDAI_PROVIDER,
+} from "../commons";
 import { request, gql } from "graphql-request";
 import { ethers, utils } from "ethers";
 
@@ -220,18 +227,42 @@ export const getWhitelistOmenUsers = async () => {
     }
 
     console.log("fetching mainnet omen user addresses");
-    const mainnet = await getAddresses(GRAPH_MAINNET_HTTP, mainnetProvider);
+    const mainnetData = await getAddresses(GRAPH_MAINNET_HTTP, mainnetProvider);
     console.log("fetching xdai omen user addresses");
-    const xdai = await getAddresses(GRAPH_XDAI_HTTP, xdaiProvider);
+    const xdaiData = await getAddresses(GRAPH_XDAI_HTTP, xdaiProvider);
 
-    console.log("fetching proxy owners for all users group");
-    const totalUserProxies = Array.from(
-        new Set([...mainnet.users, ...xdai.users, ...mainnet.lps, ...xdai.lps])
+    console.log("fetching proxy owners for mainnet users");
+    const mainnetPotentialProxies = Array.from(
+        new Set([...mainnetData.users, ...mainnetData.lps])
     );
-    totalUsers = Array.from(new Set(await getOwners(totalUserProxies)));
+    const eaoMainnetUsers = await getEoaAddresses(
+        Array.from(new Set(await getOwners(mainnetPotentialProxies))),
+        MAINNET_PROVIDER
+    );
+    console.log(
+        `fetched ${eaoMainnetUsers.length} mainnet omen users (removed ${
+            mainnetPotentialProxies.length - eaoMainnetUsers.length
+        } sc users)`
+    );
+
+    console.log("fetching proxy owners for xdai users");
+    const xDaiPotentialProxies = Array.from(
+        new Set([...xdaiData.users, ...xdaiData.lps])
+    );
+    const eaoXDaiUsers = await getEoaAddresses(
+        Array.from(new Set(await getOwners(xDaiPotentialProxies))),
+        XDAI_PROVIDER
+    );
+    console.log(
+        `fetched ${eaoXDaiUsers.length} xdai omen users (removed ${
+            xDaiPotentialProxies.length - eaoXDaiUsers.length
+        } sc users)`
+    );
+
+    totalUsers = eaoMainnetUsers.concat(eaoXDaiUsers);
 
     console.log(
-        `number of addresses that spent more than 25 usd on omen: ${totalUsers.length}`
+        `number of unique addresses that spent more than 25 usd on omen: ${totalUsers.length}`
     );
     saveCache(totalUsers, CACHE_LOCATION);
     return totalUsers;

@@ -44,6 +44,7 @@
         "hardhat": "^2.2.1",
         "hardhat-gas-reporter": "^1.0.4",
         "husky": "^6.0.0",
+        "jayson": "^3.6.4",
         "luxon": "^1.27.0",
         "merkletreejs": "^0.2.18",
         "node-fetch": "^2.6.1",

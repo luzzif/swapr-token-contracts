@@ -1,13 +1,17 @@
-import { GraphQLClient, gql } from "graphql-request";
+import { gql } from "graphql-request";
 import {
     getAllDataFromSubgraph,
+    getEoaAddresses,
     loadCache,
+    MAINNET_PROVIDER,
     MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK,
     MARKETING_AIRDROP_XDAI_SNAPSHOT_BLOCK,
     saveCache,
     SWAPR_MAINNET_SUBGRAPH_CLIENT,
     SWAPR_XDAI_SUBGRAPH_CLIENT,
+    XDAI_PROVIDER,
 } from "../commons";
+import { providers } from "ethers";
 
 const CACHE_LOCATION = `${__dirname}/cache.json`;
 
@@ -35,6 +39,17 @@ interface Swap {
     from: string;
 }
 
+const getEoaSwaps = async (
+    swaps: Swap[],
+    provider: providers.JsonRpcProvider
+): Promise<Swap[]> => {
+    const eaoAddresses = await getEoaAddresses(
+        swaps.map((swap) => swap.from),
+        provider
+    );
+    return swaps.filter((swap) => eaoAddresses.indexOf(swap.from) >= 0);
+};
+
 export const getWhitelistMoreThanOneSwaprTrade = async () => {
     let serialSwappers = loadCache(CACHE_LOCATION);
     if (serialSwappers.length > 0) {
@@ -51,6 +66,12 @@ export const getWhitelistMoreThanOneSwaprTrade = async () => {
         { block: MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK }
     );
     console.log(`fetched ${mainnetSwaps.length} swapr mainnet swaps`);
+    const eoaMainnetSwaps = await getEoaSwaps(mainnetSwaps, MAINNET_PROVIDER);
+    console.log(
+        `removed ${
+            mainnetSwaps.length - eoaMainnetSwaps.length
+        } sc-made mainnet swaps`
+    );
 
     console.log("fetching swapr xdai swaps");
     const xDaiSwaps = await getAllDataFromSubgraph<Swap>(
@@ -59,8 +80,12 @@ export const getWhitelistMoreThanOneSwaprTrade = async () => {
         { block: MARKETING_AIRDROP_XDAI_SNAPSHOT_BLOCK }
     );
     console.log(`fetched ${xDaiSwaps.length} swapr xdai swaps`);
+    const eoaXDaiSwaps = await getEoaSwaps(xDaiSwaps, XDAI_PROVIDER);
+    console.log(
+        `removed ${xDaiSwaps.length - eoaXDaiSwaps.length} sc-made xdai swaps`
+    );
 
-    const allSwaps = mainnetSwaps.concat(xDaiSwaps);
+    const allSwaps = eoaMainnetSwaps.concat(eoaXDaiSwaps);
 
     serialSwappers = Object.entries(
         allSwaps.reduce((accumulator: { [swapper: string]: number }, swap) => {

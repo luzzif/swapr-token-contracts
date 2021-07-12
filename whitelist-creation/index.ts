@@ -7,10 +7,10 @@ import { getWhitelistDexGuruTraders } from "./dex-guru-traders";
 import { getWhitelistDxdHolders } from "./dxd-holders";
 import { getWhitelistPoapHolders } from "./poap-holders";
 import { getWhitelistXSdtHolders } from "./xsdt-holders";
+import { getWhitelist1InchVoters } from "./1inch-governance-voters";
 
 const createWhitelist = async () => {
-    console.log("fetching marketing airdrop data");
-    console.log();
+    const oneInchVotersWhitelist = await getWhitelist1InchVoters();
     const xSdtHoldersWhitelist = await getWhitelistXSdtHolders();
     const poapHoldersWhitelist = await getWhitelistPoapHolders();
     const dexGuruWhitelist = await getWhitelistDexGuruTraders();
@@ -19,13 +19,9 @@ const createWhitelist = async () => {
         await getWhitelistUniswapOnArbitrumYes();
     const moreThanOneBanklessDaoVoteWhitelist =
         await getWhitelistMoreThanOneBanklessDaoVote();
-    const positiveVotersWhitelist = await getWhitelistUniswapOnArbitrumYes();
     const moreThanOneSwaprSwapWhitelist =
         await getWhitelistMoreThanOneSwaprTrade();
     const liquidityProvidersWhitelist = await getWhitelistLiquidityProviders();
-
-    console.log("fetching dxd holders airdrop data");
-    console.log();
     const dxdHoldersWhitelist = await getWhitelistDxdHolders();
 };
 

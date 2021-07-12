@@ -89,7 +89,7 @@ export const getHoneyswapDxdLiquidityProviders = async (block: BigNumber) => {
         )
     );
     console.log(
-        `fetched ${dedupedLiquidityProviders.length} mainnet honeyswap dxd lps`
+        `fetched ${dedupedLiquidityProviders.length} xdai honeyswap dxd lps`
     );
     console.log();
     return dedupedLiquidityProviders;

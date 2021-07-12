@@ -17,23 +17,12 @@ export const getWhitelistXSdtHolders = async () => {
         return nonZeroXSdtHolders;
     }
 
-    const mainnetNonZeroXSdtHolders =
-        await getErc20NonZeroTokenHoldersEoaSnapshot(
-            XSDT_MAINNET_ADDRESS,
-            BigNumber.from("12051153"), // xsdt token deployment block
-            BigNumber.from(MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK),
-            MAINNET_PROVIDER
-        );
-    console.log(
-        `fetched ${mainnetNonZeroXSdtHolders.length} mainnet non-zero xsdt holders`
-    );
-    console.log();
-
-    nonZeroXSdtHolders = Array.from(new Set(mainnetNonZeroXSdtHolders));
-    console.log(
-        `number of unique non-zero xsdt holders: ${nonZeroXSdtHolders.length}`
+    nonZeroXSdtHolders = await getErc20NonZeroTokenHoldersEoaSnapshot(
+        XSDT_MAINNET_ADDRESS,
+        BigNumber.from("12051153"), // xsdt token deployment block
+        BigNumber.from(MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK),
+        MAINNET_PROVIDER
     );
     saveCache(nonZeroXSdtHolders, `${__dirname}/cache.json`);
-
     return nonZeroXSdtHolders;
 };
