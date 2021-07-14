@@ -101,7 +101,7 @@ const processUsers = async (url: any) => {
     });
 
     // filter out addresses that spent less than the minimum
-    const minSpend = 25;
+    const minSpend = 100;
     const eligibleAddresses = Object.keys(accounts).filter(
         (account: string) =>
             accounts[account] >= minSpend && !blacklist[account]
