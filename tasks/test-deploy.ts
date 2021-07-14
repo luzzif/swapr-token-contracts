@@ -10,6 +10,7 @@ import { MerkleTree } from "../merkle-tree";
 import airdropData from "../airdrop-data.json";
 import { formatBytes32String } from "ethers/lib/utils";
 import { BigNumber } from "ethers";
+import { DateTime } from "luxon";
 
 interface TaskArguments {
     verify: boolean;
@@ -58,7 +59,8 @@ task(
             )) as SWPRClaimer__factory;
             const swprClaimer: SWPRClaimer = await SWPRClaimer.deploy(
                 swpr.address,
-                merkleRoot
+                merkleRoot,
+                DateTime.now().plus({ month: 1 }).toSeconds()
             );
 
             // funding the claimer

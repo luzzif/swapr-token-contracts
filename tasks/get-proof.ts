@@ -14,13 +14,8 @@ task(
 )
     .addParam("account", "The account for which to get the Merkle proof")
     .addParam("amount", "The amount for which to get the Merkle proof")
-    .setAction(
-        async (
-            taskArguments: TaskArguments,
-            hre: HardhatRuntimeEnvironment
-        ) => {
-            const { account, amount } = taskArguments;
-            const merkleTree = new MerkleTree(airdropData);
-            console.log(`proof: ${merkleTree.getProof({ account, amount })}`);
-        }
-    );
+    .setAction(async (taskArguments: TaskArguments) => {
+        const { account, amount } = taskArguments;
+        const merkleTree = new MerkleTree(airdropData);
+        console.log(`proof: ${merkleTree.getProof({ account, amount })}`);
+    });

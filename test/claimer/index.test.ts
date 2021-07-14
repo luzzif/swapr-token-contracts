@@ -18,13 +18,17 @@ describe("SWPRClaimer", () => {
         const swprClaimer = (await deployContract(
             initialHolderAccount,
             swprClaimerJson,
-            [swpr.address, formatBytes32String("fake-merkle-root")]
+            [
+                swpr.address,
+                formatBytes32String("fake-merkle-root"),
+                Math.floor(Date.now() / 1000) + 1000,
+            ]
         )) as SWPRClaimer;
         await expect(
             swprClaimer
                 .connect(claimerAccount)
                 .claim(100, [formatBytes32String("fake-proof")])
-        ).to.be.revertedWith("SC04");
+        ).to.be.revertedWith("SC06");
     });
 
     it("should fail when claim is called 2 times", async () => {
@@ -37,13 +41,20 @@ describe("SWPRClaimer", () => {
             { account: Wallet.createRandom().address, amount: "300" },
             { account: Wallet.createRandom().address, amount: "500" },
         ];
+        const address = Wallet.createRandom().address; // reduces execution times
+        for (let i = 0; i < 7000; i++) {
+            leaves.push({
+                account: address,
+                amount: "200",
+            });
+        }
         const tree = new MerkleTree(leaves);
 
         // deploying claimer
         const swprClaimer = (await deployContract(
             initialHolderAccount,
             swprClaimerJson,
-            [swpr.address, tree.root]
+            [swpr.address, tree.root, Math.floor(Date.now() / 1000) + 1000]
         )) as SWPRClaimer;
 
         // funding claimer
@@ -70,7 +81,7 @@ describe("SWPRClaimer", () => {
                 leaves[0].amount,
                 tree.getProof(leaves[0])
             )
-        ).to.be.revertedWith("SC03");
+        ).to.be.revertedWith("SC05");
     });
 
     it("should succeed when contribute is called in a valid state", async () => {
@@ -89,7 +100,7 @@ describe("SWPRClaimer", () => {
         const swprClaimer = (await deployContract(
             initialHolderAccount,
             swprClaimerJson,
-            [swpr.address, tree.root]
+            [swpr.address, tree.root, Math.floor(Date.now() / 1000) + 1000]
         )) as SWPRClaimer;
 
         // funding claimer
