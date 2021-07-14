@@ -18,7 +18,8 @@
         "prepare": "husky install",
         "deploy:test:rinkeby": "hardhat test-deploy --network rinkeby",
         "get-proof": "hardhat get-proof",
-        "create-whitelist": "ts-node whitelist-creation"
+        "create-whitelist": "ts-node whitelist-creation",
+        "cache-clean": "rimraf ./whitelist-creation/**/cache.json"
     },
     "devDependencies": {
         "@commitlint/cli": "^12.1.1",
@@ -50,6 +51,7 @@
         "node-fetch": "^2.6.1",
         "prettier": "^2.1.2",
         "prettier-plugin-solidity": "^1.0.0-beta.10",
+        "rimraf": "^3.0.2",
         "solhint-plugin-prettier": "^0.0.5",
         "solidity-coverage": "^0.7.13",
         "ts-generator": "^0.1.1",
