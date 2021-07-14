@@ -71,7 +71,7 @@ task(
             if (verify) {
                 await new Promise((resolve) => {
                     console.log("waiting");
-                    setTimeout(resolve, 60000);
+                    setTimeout(resolve, 60000, []);
                 });
                 await hre.run("verify", {
                     contract: "contracts/SWPR.sol:SWPR",

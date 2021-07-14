@@ -8,3 +8,5 @@ artifacts
 
 /typechain
 .env
+coverage
+coverage.json
