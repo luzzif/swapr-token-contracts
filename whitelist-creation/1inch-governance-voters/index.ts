@@ -1,11 +1,10 @@
 import mooniswapFactoryAbi from "./mooniswap-factory-abi.json";
-import { Contract, BigNumber, providers, constants } from "ethers";
+import { Contract, BigNumber } from "ethers";
 import {
     getEoaAddresses,
     loadCache,
     logInPlace,
     MAINNET_PROVIDER,
-    MAINNET_PROVIDER_URL,
     MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK,
     MOONISWAP_FACTORY_MAINNET_ADDRESS,
     saveCache,
@@ -20,7 +19,7 @@ export const getWhitelist1InchVoters = async (): Promise<string[]> => {
         return eoaVoters;
     }
 
-    const uniqueVoters = new Set<string>();
+    const voteCounter: { [voter: string]: Set<string> } = {};
     const mooniswapFactoryContract = new Contract(
         MOONISWAP_FACTORY_MAINNET_ADDRESS,
         mooniswapFactoryAbi,
@@ -76,7 +75,9 @@ export const getWhitelist1InchVoters = async (): Promise<string[]> => {
 
         events.forEach((event) => {
             const [from] = event.args!;
-            uniqueVoters.add(from);
+            voteCounter[from] = (voteCounter[from] || new Set<string>()).add(
+                event.transactionHash
+            );
         });
 
         lastAnalyzedBlock = toBlock;
@@ -84,10 +85,12 @@ export const getWhitelist1InchVoters = async (): Promise<string[]> => {
     logInPlace("reconstructing balance map: 100%");
     console.log();
 
-    const voters = Array.from(uniqueVoters);
+    const voters = Object.entries(voteCounter)
+        .filter(([, transactionHashes]) => transactionHashes.size > 2)
+        .map(([voter]) => voter);
     eoaVoters = await getEoaAddresses(voters, MAINNET_PROVIDER);
     console.log(
-        `number of 1inch voters: ${voters.length} (${
+        `number of at least 3-time 1inch voters: ${voters.length} (${
             voters.length - eoaVoters.length
         } sc voters removed)`
     );
