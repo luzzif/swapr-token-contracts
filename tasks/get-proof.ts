@@ -1,4 +1,3 @@
-import { HardhatRuntimeEnvironment } from "hardhat/types/runtime";
 import { task } from "hardhat/config";
 import { MerkleTree } from "../merkle-tree";
 import airdropData from "../airdrop-data.json";
