@@ -41,7 +41,7 @@ const lpQuery = gql`
   }`;
 
 // utils
-const wait = () => new Promise((resolve) => setTimeout(resolve, 500));
+const wait = () => new Promise((resolve) => setTimeout(resolve, 500, {}));
 const mainnetProvider = new ethers.providers.JsonRpcBatchProvider(
     "https://mainnet.infura.io/v3/9c6788bb15234036991db4637638429f"
 );
@@ -235,28 +235,30 @@ export const getWhitelistOmenUsers = async () => {
     const mainnetPotentialProxies = Array.from(
         new Set([...mainnetData.users, ...mainnetData.lps])
     );
-    const eaoMainnetUsers = await getEoaAddresses(
-        Array.from(new Set(await getOwners(mainnetPotentialProxies))),
-        MAINNET_PROVIDER
-    );
+    const { eoas: eaoMainnetUsers, smartContracts: mainnetSmartContracts } =
+        await getEoaAddresses(
+            Array.from(new Set(await getOwners(mainnetPotentialProxies))),
+            MAINNET_PROVIDER
+        );
     console.log(
         `fetched ${eaoMainnetUsers.length} mainnet omen users (removed ${
             mainnetPotentialProxies.length - eaoMainnetUsers.length
-        } sc users)`
+        } SCs)`
     );
 
     console.log("fetching proxy owners for xdai users");
     const xDaiPotentialProxies = Array.from(
         new Set([...xdaiData.users, ...xdaiData.lps])
     );
-    const eaoXDaiUsers = await getEoaAddresses(
-        Array.from(new Set(await getOwners(xDaiPotentialProxies))),
-        XDAI_PROVIDER
-    );
+    const { eoas: eaoXDaiUsers, smartContracts: xDaiSmartContracts } =
+        await getEoaAddresses(
+            Array.from(new Set(await getOwners(xDaiPotentialProxies))),
+            XDAI_PROVIDER
+        );
     console.log(
         `fetched ${eaoXDaiUsers.length} xdai omen users (removed ${
             xDaiPotentialProxies.length - eaoXDaiUsers.length
-        } sc users)`
+        } SCs)`
     );
 
     totalUsers = eaoMainnetUsers.concat(eaoXDaiUsers);
@@ -264,6 +266,12 @@ export const getWhitelistOmenUsers = async () => {
     console.log(
         `number of unique addresses that spent more than 25 usd on omen: ${totalUsers.length}`
     );
+    console.log();
     saveCache(totalUsers, CACHE_LOCATION);
+    saveCache(
+        mainnetSmartContracts,
+        `${__dirname}/smart-contracts.mainnet.json`
+    );
+    saveCache(xDaiSmartContracts, `${__dirname}/smart-contracts.xdai.json`);
     return totalUsers;
 };

@@ -42,17 +42,20 @@ interface LiquidityPosition {
 const getEoaLiquidityPositions = async (
     liquidityPositions: LiquidityPosition[],
     provider: providers.JsonRpcProvider
-): Promise<LiquidityPosition[]> => {
-    const eaoAddresses = await getEoaAddresses(
+): Promise<{ eoaPositions: LiquidityPosition[]; smartContracts: string[] }> => {
+    const { eoas: eaoAddresses, smartContracts } = await getEoaAddresses(
         liquidityPositions.map(
             (liquidityPosition) => liquidityPosition.user.id
         ),
         provider
     );
-    return liquidityPositions.filter(
-        (liquidityPosition) =>
-            eaoAddresses.indexOf(liquidityPosition.user.id) >= 0
-    );
+    return {
+        eoaPositions: liquidityPositions.filter(
+            (liquidityPosition) =>
+                eaoAddresses.indexOf(liquidityPosition.user.id) >= 0
+        ),
+        smartContracts,
+    };
 };
 
 export const getWhitelistLiquidityProviders = async () => {
@@ -74,7 +77,10 @@ export const getWhitelistLiquidityProviders = async () => {
     console.log(
         `fetched ${mainnetLiquidityPositions.length} mainnet swapr liquidity positions`
     );
-    const eoaMainnetLiquidityPositions = await getEoaLiquidityPositions(
+    const {
+        eoaPositions: eoaMainnetLiquidityPositions,
+        smartContracts: mainnetSmartContracts,
+    } = await getEoaLiquidityPositions(
         mainnetLiquidityPositions,
         MAINNET_PROVIDER
     );
@@ -82,7 +88,7 @@ export const getWhitelistLiquidityProviders = async () => {
         `removed ${
             mainnetLiquidityPositions.length -
             eoaMainnetLiquidityPositions.length
-        } sc mainnet lps`
+        } SCs`
     );
 
     console.log("fetching xdai swapr liquidity positions");
@@ -95,14 +101,17 @@ export const getWhitelistLiquidityProviders = async () => {
     console.log(
         `fetched ${xDaiLiquidityPositions.length} xdai swapr liquidity positions`
     );
-    const eoaXdaiLiquidityPositions = await getEoaLiquidityPositions(
-        xDaiLiquidityPositions,
-        XDAI_PROVIDER
+    const {
+        eoaPositions: eoaXdaiLiquidityPositions,
+        smartContracts: xDaiSmartContracts,
+    } = await getEoaLiquidityPositions(
+        mainnetLiquidityPositions,
+        MAINNET_PROVIDER
     );
     console.log(
         `removed ${
             xDaiLiquidityPositions.length - eoaXdaiLiquidityPositions.length
-        } sc xdai lps`
+        } SCs`
     );
 
     liquidityProviders = Array.from(
@@ -119,6 +128,12 @@ export const getWhitelistLiquidityProviders = async () => {
     console.log(
         `number of addresses that provided liquidity on swapr: ${liquidityProviders.length}`
     );
+    console.log();
     saveCache(liquidityProviders, CACHE_LOCATION);
+    saveCache(
+        mainnetSmartContracts,
+        `${__dirname}/smart-contracts.mainnet.json`
+    );
+    saveCache(xDaiSmartContracts, `${__dirname}/smart-contracts.xdai.json`);
     return liquidityProviders;
 };

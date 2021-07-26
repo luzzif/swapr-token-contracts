@@ -13,10 +13,12 @@ import {
 const CACHE_LOCATION = `${__dirname}/cache.json`;
 
 export const getWhitelist1InchVoters = async (): Promise<string[]> => {
-    let eoaVoters = await loadCache(CACHE_LOCATION);
-    if (eoaVoters.length > 0) {
-        console.log(`number of 1inch voters from cache: ${eoaVoters.length}`);
-        return eoaVoters;
+    let dedupedVoters = await loadCache(CACHE_LOCATION);
+    if (dedupedVoters.length > 0) {
+        console.log(
+            `number of 1inch voters from cache: ${dedupedVoters.length}`
+        );
+        return dedupedVoters;
     }
 
     const voteCounter: { [voter: string]: Set<string> } = {};
@@ -82,19 +84,20 @@ export const getWhitelist1InchVoters = async (): Promise<string[]> => {
 
         lastAnalyzedBlock = toBlock;
     }
-    logInPlace("reconstructing balance map: 100%");
+    logInPlace("fetching 1inch governance voters: 100%");
     console.log();
 
     const voters = Object.entries(voteCounter)
         .filter(([, transactionHashes]) => transactionHashes.size > 2)
         .map(([voter]) => voter);
-    eoaVoters = await getEoaAddresses(voters, MAINNET_PROVIDER);
+    const { smartContracts } = await getEoaAddresses(voters, MAINNET_PROVIDER);
+    dedupedVoters = voters;
     console.log(
-        `number of at least 3-time 1inch voters: ${voters.length} (${
-            voters.length - eoaVoters.length
-        } sc voters removed)`
+        `number of at least 3-time 1inch voters: ${dedupedVoters.length}`
     );
-    saveCache(eoaVoters, CACHE_LOCATION);
+    console.log();
+    saveCache(dedupedVoters, CACHE_LOCATION);
+    saveCache(smartContracts, `${__dirname}/smart-contracts.mainnet.json`);
 
-    return eoaVoters;
+    return dedupedVoters;
 };

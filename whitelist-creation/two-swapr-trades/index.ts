@@ -42,12 +42,15 @@ interface Swap {
 const getEoaSwaps = async (
     swaps: Swap[],
     provider: providers.JsonRpcProvider
-): Promise<Swap[]> => {
-    const eaoAddresses = await getEoaAddresses(
+): Promise<{ eoaSwaps: Swap[]; smartContracts: string[] }> => {
+    const { eoas: eaoAddresses, smartContracts } = await getEoaAddresses(
         swaps.map((swap) => swap.from),
         provider
     );
-    return swaps.filter((swap) => eaoAddresses.indexOf(swap.from) >= 0);
+    return {
+        eoaSwaps: swaps.filter((swap) => eaoAddresses.indexOf(swap.from) >= 0),
+        smartContracts,
+    };
 };
 
 export const getWhitelistMoreThanOneSwaprTrade = async () => {
@@ -66,11 +69,12 @@ export const getWhitelistMoreThanOneSwaprTrade = async () => {
         { block: MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK }
     );
     console.log(`fetched ${mainnetSwaps.length} swapr mainnet swaps`);
-    const eoaMainnetSwaps = await getEoaSwaps(mainnetSwaps, MAINNET_PROVIDER);
+    const { eoaSwaps: eoaMainnetSwaps, smartContracts: mainnetSmartContracts } =
+        await getEoaSwaps(mainnetSwaps, MAINNET_PROVIDER);
     console.log(
         `removed ${
             mainnetSwaps.length - eoaMainnetSwaps.length
-        } sc-made mainnet swaps`
+        } SC-made mainnet swaps`
     );
 
     console.log("fetching swapr xdai swaps");
@@ -80,9 +84,10 @@ export const getWhitelistMoreThanOneSwaprTrade = async () => {
         { block: MARKETING_AIRDROP_XDAI_SNAPSHOT_BLOCK }
     );
     console.log(`fetched ${xDaiSwaps.length} swapr xdai swaps`);
-    const eoaXDaiSwaps = await getEoaSwaps(xDaiSwaps, XDAI_PROVIDER);
+    const { eoaSwaps: eoaXDaiSwaps, smartContracts: xDaiSmartContracts } =
+        await getEoaSwaps(xDaiSwaps, XDAI_PROVIDER);
     console.log(
-        `removed ${xDaiSwaps.length - eoaXDaiSwaps.length} sc-made xdai swaps`
+        `removed ${xDaiSwaps.length - eoaXDaiSwaps.length} SC-made xdai swaps`
     );
 
     const allSwaps = eoaMainnetSwaps.concat(eoaXDaiSwaps);
@@ -102,6 +107,12 @@ export const getWhitelistMoreThanOneSwaprTrade = async () => {
     console.log(
         `number of addresses that swapped more than once on swapr: ${serialSwappers.length}`
     );
+    console.log();
     saveCache(serialSwappers, CACHE_LOCATION);
+    saveCache(
+        mainnetSmartContracts,
+        `${__dirname}/smart-contracts.mainnet.json`
+    );
+    saveCache(xDaiSmartContracts, `${__dirname}/smart-contracts.xdai.json`);
     return serialSwappers;
 };

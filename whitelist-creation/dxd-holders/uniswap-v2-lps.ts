@@ -1,10 +1,10 @@
 import { BigNumber } from "ethers";
 import { gql } from "graphql-request";
 import {
-    DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK,
-    DXD_XDAI_ADDRESS,
+    DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK,
+    DXD_MAINNET_ADDRESS,
     getAllDataFromSubgraph,
-    HONEYSWAP_XDAI_SUBGRAPH_CLIENT,
+    UNISWAP_MAINNET_SUBGRAPH_CLIENT,
 } from "../commons";
 import { Decimal } from "decimal.js-light";
 import { parseEther } from "ethers/lib/utils";
@@ -12,9 +12,9 @@ import { parseEther } from "ethers/lib/utils";
 const PAIRS_TOKEN0_QUERY = gql`
     query getPairsDxdToken0($lastId: ID) {
         data: pairs(
-            block: { number: ${DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK.toNumber()} }
+            block: { number: ${DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK.toNumber()} }
             where: {
-                token0: "${DXD_XDAI_ADDRESS.toLowerCase()}"
+                token0: "${DXD_MAINNET_ADDRESS.toLowerCase()}"
                 id_gt: $lastId
             }
         ) {
@@ -26,9 +26,9 @@ const PAIRS_TOKEN0_QUERY = gql`
 const PAIRS_TOKEN1_QUERY = gql`
     query getPairsDxdToken1($lastId: ID) {
         data: pairs(
-            block: { number: ${DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK.toNumber()} }
+            block: { number: ${DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK.toNumber()} }
             where: {
-                token1: "${DXD_XDAI_ADDRESS.toLowerCase()}"
+                token1: "${DXD_MAINNET_ADDRESS.toLowerCase()}"
                 id_gt: $lastId
             }
         ) {
@@ -42,9 +42,9 @@ interface Pair {
 }
 
 const LIQUIDITY_POSITIONS_QUERY = gql`
-    query getLpsDxdToken1($lastId: ID, $pairIds: [ID!]!) {
+    query getLiquidityPositions($lastId: ID, $pairIds: [ID!]!) {
         data: liquidityPositions(
-            block: { number: ${DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK.toNumber()} }
+            block: { number: ${DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK.toNumber()} }
             where: { pair_in: $pairIds, id_gt: $lastId, liquidityTokenBalance_gt: 0 }
         ) {
             id
@@ -77,21 +77,21 @@ const getSubgraphData = async (): Promise<{
     positionsByToken1: LiquidityPosition[];
 }> => {
     const dxdPairsByToken0 = await getAllDataFromSubgraph<Pair>(
-        HONEYSWAP_XDAI_SUBGRAPH_CLIENT,
+        UNISWAP_MAINNET_SUBGRAPH_CLIENT,
         PAIRS_TOKEN0_QUERY
     );
     const positionsByToken0 = await getAllDataFromSubgraph<LiquidityPosition>(
-        HONEYSWAP_XDAI_SUBGRAPH_CLIENT,
+        UNISWAP_MAINNET_SUBGRAPH_CLIENT,
         LIQUIDITY_POSITIONS_QUERY,
         { pairIds: dxdPairsByToken0.map((pair) => pair.id) }
     );
 
     const dxdPairsByToken1 = await getAllDataFromSubgraph<Pair>(
-        HONEYSWAP_XDAI_SUBGRAPH_CLIENT,
+        UNISWAP_MAINNET_SUBGRAPH_CLIENT,
         PAIRS_TOKEN1_QUERY
     );
     const positionsByToken1 = await getAllDataFromSubgraph<LiquidityPosition>(
-        HONEYSWAP_XDAI_SUBGRAPH_CLIENT,
+        UNISWAP_MAINNET_SUBGRAPH_CLIENT,
         LIQUIDITY_POSITIONS_QUERY,
         { pairIds: dxdPairsByToken1.map((pair) => pair.id) }
     );
@@ -99,7 +99,7 @@ const getSubgraphData = async (): Promise<{
     return { positionsByToken0, positionsByToken1 };
 };
 
-export const getHoneyswapDxdLiquidityProviders = async (): Promise<{
+export const getUniswapV2DxdLiquidityProviders = async (): Promise<{
     [address: string]: BigNumber;
 }> => {
     const balanceMap: { [address: string]: BigNumber } = {};

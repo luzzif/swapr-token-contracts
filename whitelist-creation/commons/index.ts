@@ -62,10 +62,18 @@ export const DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK = BigNumber.from("12738515"); //
 export const DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK = BigNumber.from("16851527"); // block published on July-01-2021 12:07:20 AM +2 UTC
 export const DXD_MAINNET_ADDRESS = "0xa1d65E8fB6e87b60FECCBc582F7f97804B725521";
 export const DXD_XDAI_ADDRESS = "0xb90D6bec20993Be5d72A5ab353343f7a0281f158";
+export const DXD_MAINNET_MESA_TOKEN_ID = 51;
+export const DXD_XDAI_MESA_TOKEN_ID = 16;
 export const XSDT_MAINNET_ADDRESS =
     "0xac14864ce5a98af3248ffbf549441b04421247d3";
 export const MOONISWAP_FACTORY_MAINNET_ADDRESS =
     "0xbAF9A5d4b0052359326A6CDAb54BABAa3a3A9643";
+export const DXD_VESTING_FACTORY_ADDRESS =
+    "0x9A75944Ed8B1Fff381f1eBf9DD0a75ea72F75727";
+export const MAINNET_BATCH_EXCHANGE_ADDRESS =
+    "0x6F400810b62df8E13fded51bE75fF5393eaa841F";
+export const XDAI_BATCH_EXCHANGE_ADDRESS =
+    "0x25B06305CC4ec6AfCF3E7c0b673da1EF8ae26313";
 
 export const saveCache = (addresses: string[], location: string) => {
     fs.writeFileSync(location, JSON.stringify(addresses, null, 4));
@@ -112,8 +120,9 @@ interface ResponseItem {
 export const getEoaAddresses = async (
     addresses: string[],
     provider: providers.JsonRpcProvider
-): Promise<string[]> => {
+): Promise<{ eoas: string[]; smartContracts: string[] }> => {
     const eoas: string[] = [];
+    const smartContracts: string[] = [];
     const chunkSize = 1000;
     const chunksAmount = Math.ceil(addresses.length / chunkSize);
     const { host, pathname } = new url.URL(provider.connection.url);
@@ -139,7 +148,9 @@ export const getEoaAddresses = async (
             }
         );
         batchCallResponse.forEach((responseItem, index) => {
-            if (responseItem.result === "0x") eoas.push(slice[index]);
+            const address = slice[index];
+            if (responseItem.result === "0x") eoas.push(address);
+            else smartContracts.push(address);
         });
         logInPlace(
             `detecting smart contracts: ${(
@@ -149,5 +160,5 @@ export const getEoaAddresses = async (
         );
     }
     console.log();
-    return eoas;
+    return { eoas, smartContracts };
 };

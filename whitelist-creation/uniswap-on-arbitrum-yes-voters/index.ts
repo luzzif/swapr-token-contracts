@@ -59,11 +59,7 @@ export const getWhitelistUniswapOnArbitrumYes = async () => {
         );
         return yesVoters;
     }
-
-    console.log("fetching uniswap on arbitrum votes");
     const votes = await getSubgraphData();
-    console.log(`fetched ${votes.length} votes`);
-
     yesVoters = Array.from(
         new Set<string>(
             votes
@@ -75,6 +71,7 @@ export const getWhitelistUniswapOnArbitrumYes = async () => {
     console.log(
         `number of unique addresses that voted yes to uniswap on arbitrum: ${yesVoters.length}`
     );
+    console.log();
     saveCache(yesVoters, CACHE_LOCATION);
     return yesVoters;
 };

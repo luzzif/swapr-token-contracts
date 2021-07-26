@@ -91,11 +91,7 @@ export const getWhitelistMoreThanOneBanklessDaoVote = async () => {
         );
         return eligibleVoters;
     }
-
-    console.log("fetching bankless dao votes");
     const votes = await getSubgraphData();
-    console.log(`fetched ${votes.length} votes`);
-
     eligibleVoters = Object.entries(
         votes.reduce((accumulator: { [voter: string]: number }, vote) => {
             const { voter } = vote;
@@ -111,6 +107,7 @@ export const getWhitelistMoreThanOneBanklessDaoVote = async () => {
     console.log(
         `number of addresses that voted more than once on bankless dao: ${eligibleVoters.length}`
     );
+    console.log();
     saveCache(eligibleVoters, CACHE_LOCATION);
     return eligibleVoters;
 };

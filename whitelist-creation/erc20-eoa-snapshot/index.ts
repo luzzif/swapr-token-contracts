@@ -1,13 +1,16 @@
 import erc20Abi from "./erc20-abi.json";
 import { Contract, BigNumber, providers, constants } from "ethers";
 import { getEoaAddresses, logInPlace } from "../commons";
+import { parseEther } from "ethers/lib/utils";
 
-export const getErc20NonZeroTokenHoldersEoaSnapshot = async (
+export const getErc20Holders = async (
     erc20TokenAddress: string,
     startingBlock: BigNumber,
     endingBlock: BigNumber,
-    provider: providers.JsonRpcProvider
-): Promise<string[]> => {
+    provider: providers.JsonRpcProvider,
+    tokenSymbol: string,
+    minimumBalance: number
+): Promise<{ eoas: string[]; smartContracts: string[] }> => {
     const holdersMap: {
         [address: string]: BigNumber;
     } = {};
@@ -55,21 +58,25 @@ export const getErc20NonZeroTokenHoldersEoaSnapshot = async (
     logInPlace("reconstructing balance map: 100%");
     console.log();
 
+    const parsedMinimumAmount = parseEther(minimumBalance.toString());
     const nonZeroHolders = Array.from(
         Object.entries(holdersMap).reduce(
             (accumulator: Set<string>, [holder, amount]) => {
-                if (!amount.isZero()) accumulator.add(holder);
+                if (amount.gte(parsedMinimumAmount)) accumulator.add(holder);
                 return accumulator;
             },
             new Set<string>()
         )
     );
-    const eoaNonZeroHolders = await getEoaAddresses(nonZeroHolders, provider);
+    const { eoas: eoaNonZeroHolders, smartContracts } = await getEoaAddresses(
+        nonZeroHolders,
+        provider
+    );
     console.log(
-        `fetched ${eoaNonZeroHolders.length} holders (${
+        `fetched ${eoaNonZeroHolders.length} ${tokenSymbol} holders (${
             nonZeroHolders.length - eoaNonZeroHolders.length
-        } sc holders removed)`
+        } SCs removed)`
     );
 
-    return eoaNonZeroHolders;
+    return { eoas: eoaNonZeroHolders, smartContracts };
 };

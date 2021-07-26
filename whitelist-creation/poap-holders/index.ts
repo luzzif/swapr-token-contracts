@@ -66,14 +66,12 @@ export const getWhitelistPoapHolders = async () => {
         POAP_MAINNET_SUBGRAPH_CLIENT,
         MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK
     );
-    const eoaMainnetHolders = await getEoaAddresses(
-        mainnetHolders,
-        MAINNET_PROVIDER
-    );
+    const { eoas: eoaMainnetHolders, smartContracts: mainnetSmartContracts } =
+        await getEoaAddresses(mainnetHolders, MAINNET_PROVIDER);
     console.log(
         `fetched ${eoaMainnetHolders.length} mainnet poap holders (removed ${
             mainnetHolders.length - eoaMainnetHolders.length
-        } sc holders)`
+        } SCs)`
     );
 
     console.log("fetching xdai poap holders");
@@ -81,18 +79,23 @@ export const getWhitelistPoapHolders = async () => {
         POAP_XDAI_SUBGRAPH_CLIENT,
         MARKETING_AIRDROP_XDAI_SNAPSHOT_BLOCK
     );
-    const eoaXdaiHolders = await getEoaAddresses(xDaiHolders, XDAI_PROVIDER);
+    const { eoas: eoaXdaiHolders, smartContracts: xDaiSmartContracts } =
+        await getEoaAddresses(xDaiHolders, XDAI_PROVIDER);
     console.log(
         `fetched ${eoaXdaiHolders.length} xdai poap holders (removed ${
             xDaiHolders.length - eoaXdaiHolders.length
-        } sc holders)`
+        } SCs)`
     );
     poapHolders = Array.from(
         new Set<string>(eoaMainnetHolders.concat(eoaXdaiHolders))
     );
-    console.log(
-        `number of unique addresses that hold poaps: ${poapHolders.length}`
-    );
+    console.log(`number of unique poap holders: ${poapHolders.length}`);
+    console.log();
     saveCache(poapHolders, CACHE_LOCATION);
+    saveCache(
+        mainnetSmartContracts,
+        `${__dirname}/smart-contracts.mainnet.json`
+    );
+    saveCache(xDaiSmartContracts, `${__dirname}/smart-contracts.xdai.json`);
     return poapHolders;
 };

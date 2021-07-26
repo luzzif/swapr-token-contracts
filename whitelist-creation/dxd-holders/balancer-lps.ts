@@ -1,15 +1,18 @@
+import Decimal from "decimal.js-light";
 import { BigNumber } from "ethers";
+import { parseEther } from "ethers/lib/utils";
 import { gql } from "graphql-request";
 import {
     BALANCER_MAINNET_SUBGRAPH_CLIENT,
+    DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK,
     DXD_MAINNET_ADDRESS,
     getAllDataFromSubgraph,
 } from "../commons";
 
 const POOLS_QUERY = gql`
-    query getPools($block: Int!, $lastId: ID) {
+    query getPools($lastId: ID) {
         data: pools(
-            block: { number: $block }
+            block: { number: ${DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK.toNumber()} }
             where: {
                 tokensList_contains: [
                     "${DXD_MAINNET_ADDRESS.toLowerCase()}"
@@ -28,15 +31,22 @@ interface Pool {
 }
 
 const LIQUIDITY_PROVIDERS_QUERY = gql`
-    query getLps($block: Int!, $poolIds: [ID!]!, $lastId: ID) {
+    query getLps($poolIds: [ID!]!, $lastId: ID) {
         data: poolShares(
-            block: { number: $block }
+            block: { number: ${DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK.toNumber()} }
             where: { poolId_in: $poolIds, balance_gt: 0, id_gt: $lastId }
         ) {
             id
+            poolId {
+                totalShares
+                tokens(where: {address: "${DXD_MAINNET_ADDRESS.toLowerCase()}"}) {
+                    balance
+                }
+            }
             userAddress {
                 id
             }
+            balance
         }
     }
 `;
@@ -44,39 +54,42 @@ const LIQUIDITY_PROVIDERS_QUERY = gql`
 interface LiquidityProvider {
     id: string;
     userAddress: { id: string };
+    poolId: { totalShares: string; tokens: { balance: string }[] };
+    balance: string;
 }
 
-const getSubgraphData = async (
-    block: BigNumber
-): Promise<LiquidityProvider[]> => {
+const getSubgraphData = async (): Promise<LiquidityProvider[]> => {
     const pools = await getAllDataFromSubgraph<Pool>(
         BALANCER_MAINNET_SUBGRAPH_CLIENT,
-        POOLS_QUERY,
-        { block: block.toNumber() }
+        POOLS_QUERY
     );
 
     return getAllDataFromSubgraph<LiquidityProvider>(
         BALANCER_MAINNET_SUBGRAPH_CLIENT,
         LIQUIDITY_PROVIDERS_QUERY,
-        { block: block.toNumber(), poolIds: pools.map((pool) => pool.id) }
+        { poolIds: pools.map((pool) => pool.id) }
     );
 };
 
-export const getBalancerDxdLiquidityProviders = async (block: BigNumber) => {
-    console.log("fetching mainnet balancer dxd lps");
-    const balancerLiquidityProviders = await getSubgraphData(block);
+export const getBalancerDxdLiquidityProviders = async () => {
+    const balanceMap: { [address: string]: BigNumber } = {};
 
-    const dedupedLiquidityProviders = Array.from(
-        new Set<string>(
-            balancerLiquidityProviders.map((lp) => {
-                return lp.userAddress.id;
-            })
-        )
-    );
+    const liquidityProviders = await getSubgraphData();
+    liquidityProviders.forEach((position) => {
+        const userAddress = position.userAddress.id;
+        const userLpTokenBalance = new Decimal(position.balance);
+        const pairTotalSupply = new Decimal(position.poolId.totalShares);
+        const userPoolPercentage =
+            userLpTokenBalance.dividedBy(pairTotalSupply);
+        if (position.poolId.tokens.length !== 1)
+            throw new Error("expected only one dxd token in the pool");
+        const userDxdHolding = new Decimal(
+            position.poolId.tokens[0].balance
+        ).mul(userPoolPercentage);
+        balanceMap[userAddress] = (
+            balanceMap[userAddress] || BigNumber.from(0)
+        ).add(parseEther(userDxdHolding.toFixed(18)));
+    });
 
-    console.log(
-        `fetched ${dedupedLiquidityProviders.length} mainnet balancer dxd lps`
-    );
-    console.log();
-    return dedupedLiquidityProviders;
+    return balanceMap;
 };
