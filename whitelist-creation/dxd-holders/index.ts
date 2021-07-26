@@ -20,6 +20,7 @@ import { parseEther } from "ethers/lib/utils";
 import { getBalancerDxdLiquidityProviders } from "./balancer-lps";
 import { getMesaDxdHolders } from "./mesa";
 import { getSwaprDxdLiquidityProviders } from "./swapr";
+import { getLoopringDxdHolders } from "./loopring";
 
 // in order to be included in the airdrop, a minimum of 0.5 DXD has to be held
 const MINIMUM_HOLDINGS = parseEther("0.5");
@@ -188,6 +189,7 @@ export const getWhitelistDxdHolders = async () => {
             Object.keys(mainnetSwaprBalances).length
         } mainnet swapr dxd lps`
     );
+    const loopringBalances = await getLoopringDxdHolders();
     const {
         xDaiHolders: xDaiMesaBalances,
         mainnetHolders: mainnetMesaBalances,
@@ -238,6 +240,7 @@ export const getWhitelistDxdHolders = async () => {
     mergeBalanceMaps(balanceMap, mainnetSwaprBalances);
     mergeBalanceMaps(balanceMap, xDaiHolders);
     mergeBalanceMaps(balanceMap, mainnetHolders);
+    mergeBalanceMaps(balanceMap, loopringBalances);
 
     const blacklist = [
         ...STATIC_AIRDROP_RECIPIENT_BLACKLIST,

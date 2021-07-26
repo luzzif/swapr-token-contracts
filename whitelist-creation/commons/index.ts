@@ -24,6 +24,10 @@ export const BALANCER_MAINNET_SUBGRAPH_CLIENT = new GraphQLClient(
     "https://api.thegraph.com/subgraphs/name/balancer-labs/balancer"
 );
 
+export const LOOPRING_EXCHANGE_V2_SUBGRAPH_CLIENT = new GraphQLClient(
+    "https://api.thegraph.com/subgraphs/name/protofire/loopring-exchange-v2"
+);
+
 export const SWAPR_MAINNET_SUBGRAPH_CLIENT = new GraphQLClient(
     "https://api.thegraph.com/subgraphs/name/luzzif/swapr-mainnet-alpha"
 );
@@ -74,6 +78,7 @@ export const MAINNET_BATCH_EXCHANGE_ADDRESS =
     "0x6F400810b62df8E13fded51bE75fF5393eaa841F";
 export const XDAI_BATCH_EXCHANGE_ADDRESS =
     "0x25B06305CC4ec6AfCF3E7c0b673da1EF8ae26313";
+export const DXD_LOOPRING_TOKEN_ID = "16";
 
 export const saveCache = (addresses: string[], location: string) => {
     fs.writeFileSync(location, JSON.stringify(addresses, null, 4));
