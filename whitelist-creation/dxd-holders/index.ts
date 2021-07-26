@@ -15,11 +15,10 @@ import {
 import { getHoneyswapDxdLiquidityProviders } from "./honeyswap-lps";
 import { getUniswapV2DxdLiquidityProviders } from "./uniswap-v2-lps";
 import vestingFactoryAbi from "./abis/vesting-factory.json";
-import erc20Abi from "../erc20-eoa-snapshot/erc20-abi.json";
+import erc20Abi from "../abis/erc20.json";
 import { parseEther } from "ethers/lib/utils";
 import { getBalancerDxdLiquidityProviders } from "./balancer-lps";
 import { getMesaDxdHolders } from "./mesa";
-import { format } from "prettier";
 import { getSwaprDxdLiquidityProviders } from "./swapr";
 
 // in order to be included in the airdrop, a minimum of 0.5 DXD has to be held
