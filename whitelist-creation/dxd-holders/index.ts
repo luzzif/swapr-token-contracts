@@ -49,6 +49,9 @@ const STATIC_AIRDROP_RECIPIENT_BLACKLIST = [
     "0x068a593Ed20FAc229C527BE81765C7Fc497c3fD8", // Farming on Swapr with DXD and WETH as reward (locked)
     "0x627FF06e3be50295D60Cda25b3b54Ff2962b4f20", // Farming on Swapr with DXD and WETH as reward (unlocked)
     "0x745c1E2417455814C9359366d281b4A650A6AC61", // Uniswap v1 pair
+    "0xE5c405C5578d84c5231D3a9a29Ef4374423fA0c2", // Custodian contract
+    "0xdD9f24EfC84D93deeF3c8745c837ab63E80Abd27", // Governance leftover exchanger contract (not sure what it's about)
+    "0x6709a35B20211479849F70E19Bc248481a448FA5", // Random bridge contract
 
     // xDai
     "0x1bDe964eCd52429004CbC5812C07C28bEC9147e9", // Swapr ETHDXD pool
@@ -160,17 +163,6 @@ const getMainnetDxdVestingContractAddresses = async () => {
     return Array.from(vestingContractAddresses);
 };
 
-const mergeBalanceMaps = (
-    outputMap: { [address: string]: BigNumber },
-    inputMap: { [address: string]: BigNumber }
-) => {
-    Object.entries(inputMap).forEach(([account, balance]) => {
-        outputMap[account] = (outputMap[account] || BigNumber.from(0)).add(
-            balance
-        );
-    });
-};
-
 export const getWhitelistDxdHolders = async () => {
     let eligibleAddresses = await loadCache(`${__dirname}/cache.json`);
     if (eligibleAddresses.length > 0) {
@@ -198,6 +190,13 @@ export const getWhitelistDxdHolders = async () => {
     const uniswapV2LpBalances = await getUniswapV2DxdLiquidityProviders();
     const balancerLpBalances = await getBalancerDxdLiquidityProviders();
 
+    const vestingContractAddresses =
+        await getMainnetDxdVestingContractAddresses();
+    const blacklist = [
+        ...STATIC_AIRDROP_RECIPIENT_BLACKLIST,
+        ...vestingContractAddresses,
+    ];
+
     const xDaiHolders = await getDxdTokenHoldersWithBalances(
         XDAI_PROVIDER,
         DXD_XDAI_ADDRESS,
@@ -205,9 +204,17 @@ export const getWhitelistDxdHolders = async () => {
         DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK
     );
     const { smartContracts: xDaiSmartContractHolders } = await getEoaAddresses(
-        Object.keys(xDaiHolders)
-            .concat(Object.keys(xDaiMesaBalances))
-            .concat(Object.keys(xDaiSwaprBalances)),
+        Object.entries({
+            ...xDaiHolders,
+            ...xDaiMesaBalances,
+            ...xDaiSwaprBalances,
+        })
+            .filter(
+                ([address, balance]) =>
+                    blacklist.indexOf(address) < 0 &&
+                    balance.gt(MINIMUM_HOLDINGS)
+            )
+            .map(([address]) => address),
         XDAI_PROVIDER
     );
 
@@ -219,33 +226,34 @@ export const getWhitelistDxdHolders = async () => {
     );
     const { smartContracts: mainnetSmartContractHolders } =
         await getEoaAddresses(
-            Object.keys(mainnetHolders)
-                .concat(Object.keys(uniswapV2LpBalances))
-                .concat(Object.keys(balancerLpBalances))
-                .concat(Object.keys(mainnetMesaBalances))
-                .concat(Object.keys(mainnetSwaprBalances)),
+            Object.entries({
+                ...mainnetHolders,
+                ...uniswapV2LpBalances,
+                ...balancerLpBalances,
+                ...mainnetMesaBalances,
+                ...mainnetSwaprBalances,
+            })
+                .filter(
+                    ([address, balance]) =>
+                        blacklist.indexOf(address) < 0 &&
+                        balance.gt(MINIMUM_HOLDINGS)
+                )
+                .map(([address]) => address),
             MAINNET_PROVIDER
         );
 
-    const vestingContractAddresses =
-        await getMainnetDxdVestingContractAddresses();
-
-    const balanceMap: { [address: string]: BigNumber } = {};
-    mergeBalanceMaps(balanceMap, honeyswapLpBalances);
-    mergeBalanceMaps(balanceMap, uniswapV2LpBalances);
-    mergeBalanceMaps(balanceMap, balancerLpBalances);
-    mergeBalanceMaps(balanceMap, xDaiMesaBalances);
-    mergeBalanceMaps(balanceMap, mainnetMesaBalances);
-    mergeBalanceMaps(balanceMap, xDaiSwaprBalances);
-    mergeBalanceMaps(balanceMap, mainnetSwaprBalances);
-    mergeBalanceMaps(balanceMap, xDaiHolders);
-    mergeBalanceMaps(balanceMap, mainnetHolders);
-    mergeBalanceMaps(balanceMap, loopringBalances);
-
-    const blacklist = [
-        ...STATIC_AIRDROP_RECIPIENT_BLACKLIST,
-        ...vestingContractAddresses,
-    ];
+    const balanceMap: { [address: string]: BigNumber } = {
+        ...honeyswapLpBalances,
+        ...uniswapV2LpBalances,
+        ...balancerLpBalances,
+        ...xDaiMesaBalances,
+        ...mainnetMesaBalances,
+        ...xDaiSwaprBalances,
+        ...mainnetSwaprBalances,
+        ...xDaiHolders,
+        ...mainnetHolders,
+        ...loopringBalances,
+    };
 
     eligibleAddresses = Object.entries(balanceMap)
         .filter(

@@ -3,20 +3,29 @@
 import {
     getEoaAddresses,
     loadCache,
+    logInPlace,
     MAINNET_PROVIDER,
     MARKETING_AIRDROP_TIME_LIMIT,
     saveCache,
     XDAI_PROVIDER,
 } from "../commons";
 import { request, gql } from "graphql-request";
-import { ethers, utils } from "ethers";
+import { constants, ethers, providers, utils } from "ethers";
+import url from "url";
+import { Client } from "jayson";
+import { Interface } from "ethers/lib/utils";
 
-const CACHE_LOCATION = `${__dirname}/cache.json`;
+const EOA_CACHE_LOCATION = `${__dirname}/cache/eoas.json`;
+const MAINNET_SC_CACHE_LOCATION = `${__dirname}/cache/mainnet-scs.json`;
+const XDAI_SC_CACHE_LOCATION = `${__dirname}/cache/xdai-scs.json`;
 
 const GRAPH_MAINNET_HTTP =
     "https://api.thegraph.com/subgraphs/name/protofire/omen";
 const GRAPH_XDAI_HTTP =
     "https://api.thegraph.com/subgraphs/name/protofire/omen-xdai";
+const CPK_INTERFACE = new Interface([
+    "function getOwners() public view returns (address[] memory)",
+]);
 
 // queries
 const userQuery = gql`
@@ -161,117 +170,125 @@ const getAddresses = async (url: any, provider: any) => {
     return { users, lps };
 };
 
-const getProxyOwner = async (proxyAddress: any) => {
-    const proxyAbi = [
-        "function getOwners() public view returns (address[] memory)",
-    ];
-    let owners;
-    try {
-        const proxy = new ethers.Contract(
-            proxyAddress,
-            proxyAbi,
-            mainnetProvider
+interface ResponseItem {
+    result: string;
+}
+
+export const getCPKOwners = async (
+    cpkAddresses: string[],
+    provider: providers.JsonRpcProvider
+): Promise<string[]> => {
+    const owners: string[] = [];
+    const chunkSize = 1000;
+    const chunksAmount = Math.ceil(cpkAddresses.length / chunkSize);
+    const { host, pathname } = new url.URL(provider.connection.url);
+    const jsonRpcClient = Client.https({
+        host,
+        path: pathname,
+    });
+    for (let i = 0; i < chunksAmount; i++) {
+        const sliceEnd = Math.min(
+            i * chunkSize + chunkSize,
+            cpkAddresses.length
         );
-        owners = await proxy.getOwners();
-    } catch (e) {}
-
-    if (!owners) {
-        try {
-            const proxy = new ethers.Contract(
-                proxyAddress,
-                proxyAbi,
-                xdaiProvider
-            );
-            owners = await proxy.getOwners();
-        } catch (e) {}
+        const slice = cpkAddresses.slice(i * chunkSize, sliceEnd);
+        const callsBatch = slice.map((address) =>
+            jsonRpcClient.request("eth_call", [
+                {
+                    to: address,
+                    data: CPK_INTERFACE.encodeFunctionData("getOwners()"),
+                },
+            ])
+        );
+        const batchCallResponse: ResponseItem[] = await new Promise(
+            (resolve, reject) => {
+                jsonRpcClient.request(
+                    callsBatch,
+                    (error: Error, response: any) => {
+                        if (error) reject(error);
+                        else resolve(response);
+                    }
+                );
+            }
+        );
+        batchCallResponse.forEach((responseItem, index) => {
+            const address = slice[index];
+            try {
+                const result = CPK_INTERFACE.decodeFunctionResult(
+                    "getOwners()",
+                    responseItem.result
+                );
+                owners.push(...result[0]);
+            } catch (error) {}
+        });
+        logInPlace(
+            `detecting cpk owners: ${(
+                (sliceEnd / cpkAddresses.length) *
+                100
+            ).toFixed(2)}%`
+        );
     }
-    return owners && owners[0];
+    console.log();
+    return owners;
 };
 
-const getOwner = async (proxyAddress: any) => {
-    // get the owner of a proxy
-    const owner = await getProxyOwner(proxyAddress);
-
-    if (!owner) {
-        // user has no proxy, likely interacted directly with a market
-        return proxyAddress;
-    }
-
-    // we must handle proxies that are also owned by proxies
-    const double = await getProxyOwner(owner);
-    if (double) {
-        return double;
-    }
-
-    return owner;
-};
-
-const getOwners = async (proxies: any): Promise<string[]> => {
-    const owners = new Set<string>();
-    await Promise.all(
-        proxies.map(async (proxy: any) => {
-            const owner = await getOwner(proxy);
-            owners.add(owner);
-        })
-    );
-    return Array.from(owners);
-};
-
-export const getWhitelistOmenUsers = async () => {
-    let totalUsers = loadCache(CACHE_LOCATION);
-    if (totalUsers.length > 0) {
+export const getWhitelistOmenUsers = async (): Promise<{
+    eoas: string[];
+    mainnetSmartContracts: string[];
+    xDaiSmartContracts: string[];
+}> => {
+    let eoas = loadCache(EOA_CACHE_LOCATION);
+    let mainnetSmartContracts = loadCache(MAINNET_SC_CACHE_LOCATION);
+    let xDaiSmartContracts = loadCache(XDAI_SC_CACHE_LOCATION);
+    if (
+        eoas.length > 0 ||
+        mainnetSmartContracts.length > 0 ||
+        xDaiSmartContracts.length > 0
+    ) {
         console.log(
-            `number of omen users from cache that spent more than 25usd: ${totalUsers.length}`
+            `omen users from cache: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnet smart contracts, ${xDaiSmartContracts.length} xdai smart contracts`
         );
-        return totalUsers;
+        return { eoas, mainnetSmartContracts, xDaiSmartContracts };
     }
 
-    console.log("fetching mainnet omen user addresses");
     const mainnetData = await getAddresses(GRAPH_MAINNET_HTTP, mainnetProvider);
-    console.log("fetching xdai omen user addresses");
     const xdaiData = await getAddresses(GRAPH_XDAI_HTTP, xdaiProvider);
 
-    console.log("fetching proxy owners for mainnet users");
     const mainnetPotentialProxies = Array.from(
         new Set([...mainnetData.users, ...mainnetData.lps])
     );
-    const { eoas: eaoMainnetUsers, smartContracts: mainnetSmartContracts } =
-        await getEoaAddresses(
-            Array.from(new Set(await getOwners(mainnetPotentialProxies))),
-            MAINNET_PROVIDER
-        );
-    console.log(
-        `fetched ${eaoMainnetUsers.length} mainnet omen users (removed ${
-            mainnetPotentialProxies.length - eaoMainnetUsers.length
-        } SCs)`
+    const mainnetProxyOwners = Array.from(
+        new Set(
+            await getCPKOwners(
+                mainnetPotentialProxies as string[],
+                MAINNET_PROVIDER
+            )
+        )
     );
+    const { eoas: rawMainnetEoas, smartContracts: rawMainnetSmartContracts } =
+        await getEoaAddresses(mainnetProxyOwners, MAINNET_PROVIDER);
 
-    console.log("fetching proxy owners for xdai users");
     const xDaiPotentialProxies = Array.from(
         new Set([...xdaiData.users, ...xdaiData.lps])
     );
-    const { eoas: eaoXDaiUsers, smartContracts: xDaiSmartContracts } =
-        await getEoaAddresses(
-            Array.from(new Set(await getOwners(xDaiPotentialProxies))),
-            XDAI_PROVIDER
-        );
-    console.log(
-        `fetched ${eaoXDaiUsers.length} xdai omen users (removed ${
-            xDaiPotentialProxies.length - eaoXDaiUsers.length
-        } SCs)`
+    const xDaiProxyOwners = Array.from(
+        new Set(
+            await getCPKOwners(xDaiPotentialProxies as string[], XDAI_PROVIDER)
+        )
     );
+    const { eoas: rawXDaiEoas, smartContracts: rawXDaiSmartContracts } =
+        await getEoaAddresses(xDaiProxyOwners, XDAI_PROVIDER);
 
-    totalUsers = eaoMainnetUsers.concat(eaoXDaiUsers);
+    eoas = [...rawMainnetEoas, ...rawXDaiEoas];
+    mainnetSmartContracts = rawMainnetSmartContracts;
+    xDaiSmartContracts = rawXDaiSmartContracts;
 
     console.log(
-        `number of unique addresses that spent more than 25 usd on omen: ${totalUsers.length}`
+        `omen users: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnets scs, ${xDaiSmartContracts.length} xdai scs`
     );
     console.log();
-    saveCache(totalUsers, CACHE_LOCATION);
-    saveCache(
-        mainnetSmartContracts,
-        `${__dirname}/smart-contracts.mainnet.json`
-    );
-    saveCache(xDaiSmartContracts, `${__dirname}/smart-contracts.xdai.json`);
-    return totalUsers;
+    saveCache(eoas, EOA_CACHE_LOCATION);
+    saveCache(mainnetSmartContracts, MAINNET_SC_CACHE_LOCATION);
+    saveCache(xDaiSmartContracts, XDAI_SC_CACHE_LOCATION);
+    return { eoas, mainnetSmartContracts, xDaiSmartContracts };
 };

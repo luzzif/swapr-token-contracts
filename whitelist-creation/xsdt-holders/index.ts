@@ -11,6 +11,9 @@ import {
 import erc20Abi from "../abis/erc20.json";
 import { parseEther } from "ethers/lib/utils";
 
+const EOA_CACHE_LOCATION = `${__dirname}/cache/eoas.json`;
+const SC_CACHE_LOCATION = `${__dirname}/cache/scs.json`;
+
 // in order to be included in the airdrop, a minimum of 100 xSDT
 // has to be held (worth ~100USD at the time of the snapshot)
 const MINIMUM_HOLDINGS = parseEther("100");
@@ -42,7 +45,7 @@ const getXSdtTokenHoldersWithBalances = async () => {
             .sub(startingBlock)
             .toNumber();
         const progress = ((currentCheckpoint / range) * 100).toFixed(2);
-        logInPlace(`reconstructing dxd balance map: ${progress}%`);
+        logInPlace(`reconstructing xsdt balance map: ${progress}%`);
         const events = await erc20Contract.queryFilter(
             transferFilter,
             lastAnalyzedBlock.toHexString(),
@@ -66,7 +69,7 @@ const getXSdtTokenHoldersWithBalances = async () => {
         });
         lastAnalyzedBlock = toBlock;
     }
-    logInPlace("reconstructing dxd balance map: 100%");
+    logInPlace("reconstructing xsdt balance map: 100%");
     console.log();
     return Object.entries(holdersMap)
         .filter(([, balance]) => !balance.isZero())
@@ -82,17 +85,21 @@ const getXSdtTokenHoldersWithBalances = async () => {
         );
 };
 
-export const getWhitelistXSdtHolders = async () => {
-    let eligibleXSdtHolders = await loadCache(`${__dirname}/cache.json`);
-    if (eligibleXSdtHolders.length > 0) {
+export const getWhitelistXSdtHolders = async (): Promise<{
+    eoas: string[];
+    smartContracts: string[];
+}> => {
+    let eoas = await loadCache(EOA_CACHE_LOCATION);
+    let smartContracts = await loadCache(SC_CACHE_LOCATION);
+    if (eoas.length > 0 || smartContracts.length > 0) {
         console.log(
-            `number of eligible xsdt holders from cache: ${eligibleXSdtHolders.length}`
+            `xsdt holders from cache: ${eoas.length} eoas, ${smartContracts.length} scs`
         );
-        return eligibleXSdtHolders;
+        return { eoas, smartContracts };
     }
 
     const xsdtHolders = await getXSdtTokenHoldersWithBalances();
-    eligibleXSdtHolders = Array.from(
+    const holders = Array.from(
         new Set(
             Object.entries(xsdtHolders)
                 .filter(
@@ -103,12 +110,15 @@ export const getWhitelistXSdtHolders = async () => {
                 .map(([address]) => address)
         )
     );
-    const { smartContracts } = await getEoaAddresses(
-        eligibleXSdtHolders,
-        MAINNET_PROVIDER
+    const { eoas: rawEoas, smartContracts: rawSmartContracts } =
+        await getEoaAddresses(holders, MAINNET_PROVIDER);
+    eoas = rawEoas;
+    smartContracts = rawSmartContracts;
+    console.log(
+        `xsdt holders: ${eoas.length} eoas, ${smartContracts.length} scs`
     );
-    saveCache(eligibleXSdtHolders, `${__dirname}/cache.json`);
-    saveCache(smartContracts, `${__dirname}/smart-contracts.mainnet.json`);
+    saveCache(eoas, EOA_CACHE_LOCATION);
+    saveCache(smartContracts, SC_CACHE_LOCATION);
     console.log();
-    return eligibleXSdtHolders;
+    return { eoas, smartContracts };
 };

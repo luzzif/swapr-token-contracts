@@ -11,9 +11,11 @@ import {
     SWAPR_XDAI_SUBGRAPH_CLIENT,
     XDAI_PROVIDER,
 } from "../commons";
-import { providers } from "ethers";
+import { BigNumber, providers } from "ethers";
 
-const CACHE_LOCATION = `${__dirname}/cache.json`;
+const EOA_CACHE_LOCATION = `${__dirname}/cache/eoas.json`;
+const MAINNET_SC_CACHE_LOCATION = `${__dirname}/cache/mainnet-scs.json`;
+const XDAI_SC_CACHE_LOCATION = `${__dirname}/cache/xdai-scs.json`;
 
 const SWAPS_QUERY = gql`
     query getSwaps($lastId: ID, $block: Int!) {
@@ -53,66 +55,88 @@ const getEoaSwaps = async (
     };
 };
 
-export const getWhitelistMoreThanOneSwaprTrade = async () => {
-    let serialSwappers = loadCache(CACHE_LOCATION);
-    if (serialSwappers.length > 0) {
+export const getWhitelistMoreThanOneSwaprTrade = async (): Promise<{
+    eoas: string[];
+    mainnetSmartContracts: string[];
+    xDaiSmartContracts: string[];
+}> => {
+    let eoas = loadCache(EOA_CACHE_LOCATION);
+    let mainnetSmartContracts = loadCache(MAINNET_SC_CACHE_LOCATION);
+    let xDaiSmartContracts = loadCache(XDAI_SC_CACHE_LOCATION);
+    if (
+        eoas.length > 0 ||
+        mainnetSmartContracts.length > 0 ||
+        xDaiSmartContracts.length > 0
+    ) {
         console.log(
-            `number of addresses from cache with more than 1 swapr swap: ${serialSwappers.length}`
+            `swapr swappers: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnet scs, ${xDaiSmartContracts.length} xdai scs`
         );
-        return serialSwappers;
+        return { eoas, mainnetSmartContracts, xDaiSmartContracts };
     }
 
-    console.log("fetching swapr mainnet swaps");
     const mainnetSwaps = await getAllDataFromSubgraph<Swap>(
         SWAPR_MAINNET_SUBGRAPH_CLIENT,
         SWAPS_QUERY,
         { block: MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK }
     );
-    console.log(`fetched ${mainnetSwaps.length} swapr mainnet swaps`);
-    const { eoaSwaps: eoaMainnetSwaps, smartContracts: mainnetSmartContracts } =
-        await getEoaSwaps(mainnetSwaps, MAINNET_PROVIDER);
-    console.log(
-        `removed ${
-            mainnetSwaps.length - eoaMainnetSwaps.length
-        } SC-made mainnet swaps`
-    );
+    const mainnetSwappers = mainnetSwaps.map((swap) => swap.from);
 
-    console.log("fetching swapr xdai swaps");
     const xDaiSwaps = await getAllDataFromSubgraph<Swap>(
         SWAPR_XDAI_SUBGRAPH_CLIENT,
         SWAPS_QUERY,
         { block: MARKETING_AIRDROP_XDAI_SNAPSHOT_BLOCK }
     );
-    console.log(`fetched ${xDaiSwaps.length} swapr xdai swaps`);
-    const { eoaSwaps: eoaXDaiSwaps, smartContracts: xDaiSmartContracts } =
-        await getEoaSwaps(xDaiSwaps, XDAI_PROVIDER);
-    console.log(
-        `removed ${xDaiSwaps.length - eoaXDaiSwaps.length} SC-made xdai swaps`
+    const xDaiSwappers = xDaiSwaps.map((swap) => swap.from);
+
+    const allSwappers = [...mainnetSwappers, ...xDaiSwappers];
+    const filteredSwappers = Array.from(
+        new Set(
+            Object.entries(
+                allSwappers.reduce(
+                    (accumulator: { [address: string]: number }, swapper) => {
+                        accumulator[swapper] = (accumulator[swapper] || 0) + 1;
+                        return accumulator;
+                    },
+                    {}
+                )
+            )
+                .filter(([, numberOfSwaps]) => numberOfSwaps > 1)
+                .map(([address]) => address)
+        )
     );
 
-    const allSwaps = eoaMainnetSwaps.concat(eoaXDaiSwaps);
+    const { mainnetFilteredSwappers, xDaiFilteredSwappers } =
+        filteredSwappers.reduce(
+            (
+                accumulator: {
+                    mainnetFilteredSwappers: string[];
+                    xDaiFilteredSwappers: string[];
+                },
+                swapper
+            ) => {
+                if (mainnetSwappers.indexOf(swapper) >= 0)
+                    accumulator.mainnetFilteredSwappers.push(swapper);
+                else accumulator.xDaiFilteredSwappers.push(swapper);
+                return accumulator;
+            },
+            { mainnetFilteredSwappers: [], xDaiFilteredSwappers: [] }
+        );
 
-    serialSwappers = Object.entries(
-        allSwaps.reduce((accumulator: { [swapper: string]: number }, swap) => {
-            const { from: swapper } = swap;
-            accumulator[swapper] = (accumulator[swapper] || 0) + 1;
-            return accumulator;
-        }, {})
-    ).reduce((accumulator: string[], [swapper, numberOfSwaps]) => {
-        if (numberOfSwaps < 2) return accumulator;
-        accumulator.push(swapper);
-        return accumulator;
-    }, []);
+    const { eoas: rawMainnetEoas, smartContracts: rawMainnetSmartContracts } =
+        await getEoaAddresses(mainnetFilteredSwappers, MAINNET_PROVIDER);
+    const { eoas: rawXDaiEoas, smartContracts: rawXDaiSmartContracts } =
+        await getEoaAddresses(xDaiFilteredSwappers, XDAI_PROVIDER);
+
+    eoas = [...rawMainnetEoas, ...rawXDaiEoas];
+    mainnetSmartContracts = rawMainnetSmartContracts;
+    xDaiSmartContracts = rawXDaiSmartContracts;
 
     console.log(
-        `number of addresses that swapped more than once on swapr: ${serialSwappers.length}`
+        `swapr swappers: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnet scs, ${xDaiSmartContracts.length} xdai scs`
     );
     console.log();
-    saveCache(serialSwappers, CACHE_LOCATION);
-    saveCache(
-        mainnetSmartContracts,
-        `${__dirname}/smart-contracts.mainnet.json`
-    );
-    saveCache(xDaiSmartContracts, `${__dirname}/smart-contracts.xdai.json`);
-    return serialSwappers;
+    saveCache(eoas, EOA_CACHE_LOCATION);
+    saveCache(mainnetSmartContracts, MAINNET_SC_CACHE_LOCATION);
+    saveCache(xDaiSmartContracts, XDAI_SC_CACHE_LOCATION);
+    return { eoas, mainnetSmartContracts, xDaiSmartContracts };
 };

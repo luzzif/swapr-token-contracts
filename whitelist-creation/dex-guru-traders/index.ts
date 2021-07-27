@@ -20,15 +20,20 @@ interface DexGuruApiResponse {
     traders: Trader[];
 }
 
-const CACHE_LOCATION = `${__dirname}/cache.json`;
+const EOA_CACHE_LOCATION = `${__dirname}/cache/eoas.json`;
+const SC_CACHE_LOCATION = `${__dirname}/cache/scs.json`;
 
-export const getWhitelistDexGuruTraders = async () => {
-    let dedupedTraders = loadCache(CACHE_LOCATION);
-    if (dedupedTraders.length > 0) {
+export const getWhitelistDexGuruTraders = async (): Promise<{
+    eoas: string[];
+    smartContracts: string[];
+}> => {
+    let eoas = loadCache(EOA_CACHE_LOCATION);
+    let smartContracts = loadCache(SC_CACHE_LOCATION);
+    if (eoas.length > 0 || smartContracts.length > 0) {
         console.log(
-            `number of addresses from cache that traded more than twice on dex.guru: ${dedupedTraders.length}`
+            `dex.guru traders from cache: ${eoas.length} eoas, ${smartContracts.length} scs`
         );
-        return dedupedTraders;
+        return { eoas, smartContracts };
     }
 
     const from = "2021/01/01";
@@ -56,16 +61,15 @@ export const getWhitelistDexGuruTraders = async () => {
     } while (page < pageCount);
     console.log();
 
-    const { smartContracts } = await getEoaAddresses(
-        Array.from(traders),
-        MAINNET_PROVIDER
-    );
-    dedupedTraders = Array.from(traders);
+    const { eoas: rawEoas, smartContracts: rawSmartContracts } =
+        await getEoaAddresses(Array.from(traders), MAINNET_PROVIDER);
+    eoas = rawEoas;
+    smartContracts = rawSmartContracts;
     console.log(
-        `fetched ${dedupedTraders.length} dex.guru traders that traded more than twice`
+        `dex.guru traders: ${eoas.length} eoas, ${smartContracts.length} scs`
     );
     console.log();
-    saveCache(dedupedTraders, CACHE_LOCATION);
-    saveCache(smartContracts, `${__dirname}/smart-contracts.mainnet.json`);
-    return dedupedTraders;
+    saveCache(eoas, EOA_CACHE_LOCATION);
+    saveCache(smartContracts, SC_CACHE_LOCATION);
+    return { eoas, smartContracts };
 };

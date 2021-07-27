@@ -1,6 +1,7 @@
 import { BigNumber, ethers, providers } from "ethers";
 import { GraphQLClient } from "graphql-request";
 import fs from "fs";
+import { outputJSONSync } from "fs-extra";
 import { Client } from "jayson";
 import url from "url";
 
@@ -81,7 +82,7 @@ export const XDAI_BATCH_EXCHANGE_ADDRESS =
 export const DXD_LOOPRING_TOKEN_ID = "16";
 
 export const saveCache = (addresses: string[], location: string) => {
-    fs.writeFileSync(location, JSON.stringify(addresses, null, 4));
+    outputJSONSync(location, addresses, { spaces: 4 });
 };
 
 export const loadCache = (location: string): string[] => {

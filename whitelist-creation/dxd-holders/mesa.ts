@@ -13,6 +13,11 @@ import {
     logInPlace,
 } from "../commons";
 import batchExchangeAbi from "./abis/batch-exchange.json";
+import fs from "fs";
+import { outputJSONSync } from "fs-extra";
+
+const MAINNET_CACHE_LOCATION = `${__dirname}/cache/mesa-mainnet.json`;
+const XDAI_CACHE_LOCATION = `${__dirname}/cache/mesa-xdai.json`;
 
 const getMesaBalances = async (
     provider: providers.JsonRpcProvider,
@@ -192,27 +197,70 @@ const getMesaBalances = async (
         );
 };
 
+export const saveCache = (
+    balanceMap: { [address: string]: BigNumber },
+    location: string
+) => {
+    outputJSONSync(
+        location,
+        Object.entries(balanceMap).reduce(
+            (
+                accumulator: { [address: string]: string },
+                [address, balance]
+            ) => {
+                accumulator[address] = balance.toString();
+                return accumulator;
+            },
+            {}
+        ),
+        { spaces: 4 }
+    );
+};
+
+export const loadCache = (
+    location: string
+): { [address: string]: BigNumber } => {
+    if (!fs.existsSync(location)) return {};
+    return Object.entries(
+        JSON.parse(fs.readFileSync(location).toString())
+    ).reduce(
+        (accumulator: { [address: string]: BigNumber }, [address, balance]) => {
+            accumulator[address] = BigNumber.from(balance);
+            return accumulator;
+        },
+        {}
+    );
+};
+
 export const getMesaDxdHolders = async (): Promise<{
     xDaiHolders: { [address: string]: BigNumber };
     mainnetHolders: { [address: string]: BigNumber };
 }> => {
-    const mainnetHolders = await getMesaBalances(
-        MAINNET_PROVIDER,
-        MAINNET_BATCH_EXCHANGE_ADDRESS,
-        DXD_MAINNET_MESA_TOKEN_ID,
-        DXD_MAINNET_ADDRESS,
-        BigNumber.from("9340147"),
-        DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK
-    );
+    let mainnetHolders = loadCache(MAINNET_CACHE_LOCATION);
+    if (Object.keys(mainnetHolders).length === 0) {
+        mainnetHolders = await getMesaBalances(
+            MAINNET_PROVIDER,
+            MAINNET_BATCH_EXCHANGE_ADDRESS,
+            DXD_MAINNET_MESA_TOKEN_ID,
+            DXD_MAINNET_ADDRESS,
+            BigNumber.from("9340147"),
+            DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK
+        );
+        saveCache(mainnetHolders, MAINNET_CACHE_LOCATION);
+    }
 
-    const xDaiHolders = await getMesaBalances(
-        XDAI_PROVIDER,
-        XDAI_BATCH_EXCHANGE_ADDRESS,
-        DXD_XDAI_MESA_TOKEN_ID,
-        DXD_XDAI_ADDRESS,
-        BigNumber.from("11948310"),
-        DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK
-    );
+    let xDaiHolders = loadCache(XDAI_CACHE_LOCATION);
+    if (Object.keys(xDaiHolders).length === 0) {
+        xDaiHolders = await getMesaBalances(
+            XDAI_PROVIDER,
+            XDAI_BATCH_EXCHANGE_ADDRESS,
+            DXD_XDAI_MESA_TOKEN_ID,
+            DXD_XDAI_ADDRESS,
+            BigNumber.from("11948310"),
+            DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK
+        );
+        saveCache(xDaiHolders, XDAI_CACHE_LOCATION);
+    }
 
     return { xDaiHolders, mainnetHolders };
 };
