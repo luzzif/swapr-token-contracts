@@ -21,7 +21,7 @@ describe("SWPRClaimer", () => {
                 formatBytes32String("fake-merkle-root"),
                 Math.floor(Date.now() / 1000) + 1000,
             ])
-        ).to.be.revertedWith("SC01");
+        ).to.be.revertedWith("ZeroAddressInput");
     });
 
     it("should fail when deployed with an invalid merkle root", async () => {
@@ -32,7 +32,7 @@ describe("SWPRClaimer", () => {
                 formatBytes32String(""),
                 Math.floor(Date.now() / 1000) + 1000,
             ])
-        ).to.be.revertedWith("SC02");
+        ).to.be.revertedWith("InvalidMerkleRoot");
     });
 
     it("should fail when deployed with a past claim time limit", async () => {
@@ -43,7 +43,7 @@ describe("SWPRClaimer", () => {
                 formatBytes32String("fake-merkle-root"),
                 Math.floor(Date.now() / 1000) - 10, // 10 seconds in the past
             ])
-        ).to.be.revertedWith("SC03");
+        ).to.be.revertedWith("PastClaimTimeLimit");
     });
 
     it("should fail when claim is called after the claim time limit", async () => {
@@ -62,7 +62,7 @@ describe("SWPRClaimer", () => {
             swprClaimer
                 .connect(claimerAccount)
                 .claim(100, [formatBytes32String("fake-proof")])
-        ).to.be.revertedWith("SC04");
+        ).to.be.revertedWith("ClaimTimeLimitReached");
     });
 
     it("should fail when claim is called with an invalid proof", async () => {
@@ -81,7 +81,7 @@ describe("SWPRClaimer", () => {
             swprClaimer
                 .connect(claimerAccount)
                 .claim(100, [formatBytes32String("fake-proof")])
-        ).to.be.revertedWith("SC06");
+        ).to.be.revertedWith("InvalidMerkleProof");
     });
 
     it("should fail when claim is called 2 times", async () => {
@@ -134,7 +134,7 @@ describe("SWPRClaimer", () => {
                 leaves[0].amount,
                 tree.getProof(leaves[0])
             )
-        ).to.be.revertedWith("SC05");
+        ).to.be.revertedWith("AlreadyClaimed");
     });
 
     it("should succeed when claim is called in a valid state", async () => {
@@ -190,7 +190,9 @@ describe("SWPRClaimer", () => {
             [swpr.address, formatBytes32String("fake-merkle-root"), timeLimit]
         )) as SWPRClaimer;
 
-        await expect(swprClaimer.recover()).to.be.revertedWith("SC07");
+        await expect(swprClaimer.recover()).to.be.revertedWith(
+            "ClaimTimeLimitNotYetReached"
+        );
     });
 
     it("should succeed when recovering after the claim time limit when no one claimed", async () => {
