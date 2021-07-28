@@ -1,5 +1,6 @@
 import { gql } from "graphql-request";
 import {
+    getDeduplicatedAddresses,
     getEoaAddresses,
     loadCache,
     MAINNET_PROVIDER,
@@ -7,7 +8,8 @@ import {
     SNAPSHOT_CLIENT,
 } from "../commons";
 
-const CACHE_LOCATION = `${__dirname}/cache.json`;
+const EOA_CACHE_LOCATION = `${__dirname}/cache/eoas.json`;
+const SC_CACHE_LOCATION = `${__dirname}/cache/scs.json`;
 
 const VOTES_QUERY = gql`
     query getVotes($skip: Int!) {
@@ -51,27 +53,34 @@ const getSubgraphData = async (): Promise<Vote[]> => {
     return votes;
 };
 
-export const getWhitelistUniswapOnArbitrumYes = async () => {
-    let yesVoters = loadCache(CACHE_LOCATION);
-    if (yesVoters.length > 0) {
+export const getWhitelistUniswapOnArbitrumYes = async (): Promise<{
+    eoas: string[];
+    smartContracts: string[];
+}> => {
+    let eoas = loadCache(EOA_CACHE_LOCATION);
+    let smartContracts = loadCache(SC_CACHE_LOCATION);
+    if (eoas.length > 0 || smartContracts.length > 0) {
         console.log(
-            `number of addresses from cache that voted yes to uniswap on arbitrum: ${yesVoters.length}`
+            `uniswap on arbitrum voters: ${eoas.length} eoas, ${smartContracts.length} scs`
         );
-        return yesVoters;
+        return { eoas, smartContracts };
     }
     const votes = await getSubgraphData();
-    yesVoters = Array.from(
-        new Set<string>(
-            votes
-                .filter((vote) => vote.choice === 1) // first choice was yes
-                .map((vote) => vote.voter)
-        )
+    const yesVoters = getDeduplicatedAddresses(
+        votes
+            .filter((vote) => vote.choice === 1) // first choice was yes
+            .map((vote) => vote.voter)
     );
 
+    const { smartContracts: rawSmartContracts, eoas: rawEoas } =
+        await getEoaAddresses(yesVoters, MAINNET_PROVIDER);
+    eoas = rawEoas;
+    smartContracts = rawSmartContracts;
+
     console.log(
-        `number of unique addresses that voted yes to uniswap on arbitrum: ${yesVoters.length}`
+        `uniswap on arbitrum yes voters: ${eoas.length} eoas, ${smartContracts.length} scs`
     );
-    console.log();
-    saveCache(yesVoters, CACHE_LOCATION);
-    return yesVoters;
+    saveCache(eoas, EOA_CACHE_LOCATION);
+    saveCache(smartContracts, SC_CACHE_LOCATION);
+    return { eoas, smartContracts };
 };

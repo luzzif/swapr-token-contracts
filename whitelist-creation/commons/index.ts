@@ -166,7 +166,7 @@ export const getEoaAddresses = async (
             ).toFixed(2)}%`
         );
     }
-    console.log();
+    logInPlace("");
     return { eoas, smartContracts };
 };
 

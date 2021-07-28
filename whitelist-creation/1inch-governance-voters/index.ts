@@ -29,7 +29,7 @@ export const getWhitelist1InchVoters = async (): Promise<{
     let smartContracts = await loadCache(SC_CACHE_LOCATION);
     if (eoas.length > 0 || smartContracts.length > 0) {
         console.log(
-            `1inch voters from cache: ${eoas.length} eoas, ${smartContracts.length} scs`
+            `1inch voters: ${eoas.length} eoas, ${smartContracts.length} scs`
         );
         return { eoas, smartContracts };
     }
@@ -115,7 +115,6 @@ export const getWhitelist1InchVoters = async (): Promise<{
     console.log(
         `1inch voters: ${eoas.length} eoas, ${smartContracts.length} scs`
     );
-    console.log();
     saveCache(eoas, EOA_CACHE_LOCATION);
     saveCache(smartContracts, SC_CACHE_LOCATION);
 

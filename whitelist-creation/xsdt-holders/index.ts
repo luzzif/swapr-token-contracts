@@ -93,7 +93,7 @@ export const getWhitelistXSdtHolders = async (): Promise<{
     let smartContracts = await loadCache(SC_CACHE_LOCATION);
     if (eoas.length > 0 || smartContracts.length > 0) {
         console.log(
-            `xsdt holders from cache: ${eoas.length} eoas, ${smartContracts.length} scs`
+            `xsdt holders: ${eoas.length} eoas, ${smartContracts.length} scs`
         );
         return { eoas, smartContracts };
     }
@@ -119,6 +119,5 @@ export const getWhitelistXSdtHolders = async (): Promise<{
     );
     saveCache(eoas, EOA_CACHE_LOCATION);
     saveCache(smartContracts, SC_CACHE_LOCATION);
-    console.log();
     return { eoas, smartContracts };
 };

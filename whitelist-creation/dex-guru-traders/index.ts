@@ -1,6 +1,7 @@
 import { DateTime } from "luxon";
 import fetch from "node-fetch";
 import {
+    getDeduplicatedAddresses,
     getEoaAddresses,
     loadCache,
     logInPlace,
@@ -31,7 +32,7 @@ export const getWhitelistDexGuruTraders = async (): Promise<{
     let smartContracts = loadCache(SC_CACHE_LOCATION);
     if (eoas.length > 0 || smartContracts.length > 0) {
         console.log(
-            `dex.guru traders from cache: ${eoas.length} eoas, ${smartContracts.length} scs`
+            `dex.guru traders: ${eoas.length} eoas, ${smartContracts.length} scs`
         );
         return { eoas, smartContracts };
     }
@@ -43,7 +44,7 @@ export const getWhitelistDexGuruTraders = async (): Promise<{
 
     let page = 0;
     let pageCount;
-    let traders = new Set<string>();
+    let traders: string[] = [];
     do {
         page++;
         const response = await fetch(
@@ -57,12 +58,15 @@ export const getWhitelistDexGuruTraders = async (): Promise<{
 
         json.traders
             .filter((trader) => trader.stats.tradeCount.taker > 2)
-            .forEach((trader) => traders.add(trader.address));
+            .forEach((trader) => traders.push(trader.address));
     } while (page < pageCount);
     console.log();
 
     const { eoas: rawEoas, smartContracts: rawSmartContracts } =
-        await getEoaAddresses(Array.from(traders), MAINNET_PROVIDER);
+        await getEoaAddresses(
+            getDeduplicatedAddresses(traders),
+            MAINNET_PROVIDER
+        );
     eoas = rawEoas;
     smartContracts = rawSmartContracts;
     console.log(

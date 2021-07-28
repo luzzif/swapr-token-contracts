@@ -2,6 +2,7 @@ import { getAddress } from "ethers/lib/utils";
 import { gql, GraphQLClient } from "graphql-request";
 import {
     getAllDataFromSubgraph,
+    getDeduplicatedAddresses,
     getEoaAddresses,
     loadCache,
     MAINNET_PROVIDER,
@@ -43,7 +44,7 @@ const BLACKLIST = [
     "0x9edacc52a9bb7e32ddd12308b817d8e65621bfab", // Staking rewards distribution
     "0x65f29020d07A6CFa3B0bF63d749934d5A6E6ea18", // Fee receiver
     "0x61e7864d7174D83e5771bD8E75f201D95D2110ED", // Looks like Aragon stuff
-].map((address) => address.toLowerCase());
+].map(getAddress);
 
 const LIQUIDITY_POSITIONS_QUERY = gql`
     query getLiquidityPositions($lastId: ID, $block: Int!) {
@@ -137,14 +138,10 @@ export const getWhitelistLiquidityProviders = async (): Promise<{
         SWAPR_MAINNET_SUBGRAPH_CLIENT,
         MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK
     );
-    const mainnetLps = Array.from(
-        new Set(
-            mainnetLiquidityPositions
-                .map((position) => getAddress(position.user.id)) // enforces checksumming, and consistent casing
-                .filter(
-                    (address) => BLACKLIST.indexOf(address.toLowerCase()) < 0
-                )
-        )
+    const mainnetLps = getDeduplicatedAddresses(
+        mainnetLiquidityPositions
+            .map((position) => getAddress(position.user.id)) // enforces checksumming, and consistent casing
+            .filter((address) => BLACKLIST.indexOf(address) < 0)
     );
     const { eoas: rawMainnetEoas, smartContracts: rawMainnetSmartContracts } =
         await getEoaAddresses(mainnetLps, MAINNET_PROVIDER);
@@ -153,19 +150,15 @@ export const getWhitelistLiquidityProviders = async (): Promise<{
         SWAPR_XDAI_SUBGRAPH_CLIENT,
         MARKETING_AIRDROP_XDAI_SNAPSHOT_BLOCK
     );
-    const xDaiLps = Array.from(
-        new Set(
-            xDaiLiquidityPositions
-                .map((position) => getAddress(position.user.id)) // enforces checksumming, and consistent casing
-                .filter(
-                    (address) => BLACKLIST.indexOf(address.toLowerCase()) < 0
-                )
-        )
+    const xDaiLps = getDeduplicatedAddresses(
+        xDaiLiquidityPositions
+            .map((position) => getAddress(position.user.id)) // enforces checksumming, and consistent casing
+            .filter((address) => BLACKLIST.indexOf(address) < 0)
     );
     const { eoas: rawXDaiEoas, smartContracts: rawXDaiSmartContracts } =
         await getEoaAddresses(xDaiLps, XDAI_PROVIDER);
 
-    eoas = [...rawMainnetEoas, ...rawXDaiEoas];
+    eoas = getDeduplicatedAddresses([...rawMainnetEoas, ...rawXDaiEoas]);
     mainnetSmartContracts = rawMainnetSmartContracts;
     xDaiSmartContracts = rawXDaiSmartContracts;
     console.log(

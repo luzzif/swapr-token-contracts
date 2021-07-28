@@ -1,5 +1,6 @@
 import { gql, GraphQLClient } from "graphql-request";
 import {
+    getDeduplicatedAddresses,
     getEoaAddresses,
     loadCache,
     MAINNET_PROVIDER,
@@ -89,13 +90,12 @@ export const getWhitelistPoapHolders = async (): Promise<{
     const { eoas: rawXdaiEoas, smartContracts: rawXDaiSmartContracts } =
         await getEoaAddresses(xDaiHolders, XDAI_PROVIDER);
 
-    eoas = Array.from(new Set([...rawMainnetEoas, ...rawXdaiEoas]));
+    eoas = getDeduplicatedAddresses([...rawMainnetEoas, ...rawXdaiEoas]);
     mainnetSmartContracts = rawMainnetSmartContracts;
     xDaiSmartContracts = rawXDaiSmartContracts;
     console.log(
         `poap holders: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnet scs, ${xDaiSmartContracts.length} xdai scs`
     );
-    console.log();
     saveCache(eoas, EOA_CACHE_LOCATION);
     saveCache(mainnetSmartContracts, MAINNET_SC_CACHE_LOCATION);
     saveCache(xDaiSmartContracts, XDAI_SC_CACHE_LOCATION);

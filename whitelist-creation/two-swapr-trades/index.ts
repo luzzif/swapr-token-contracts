@@ -1,6 +1,7 @@
 import { gql } from "graphql-request";
 import {
     getAllDataFromSubgraph,
+    getDeduplicatedAddresses,
     getEoaAddresses,
     loadCache,
     MAINNET_PROVIDER,
@@ -12,6 +13,7 @@ import {
     XDAI_PROVIDER,
 } from "../commons";
 import { BigNumber, providers } from "ethers";
+import { getAddress } from "ethers/lib/utils";
 
 const EOA_CACHE_LOCATION = `${__dirname}/cache/eoas.json`;
 const MAINNET_SC_CACHE_LOCATION = `${__dirname}/cache/mainnet-scs.json`;
@@ -79,30 +81,27 @@ export const getWhitelistMoreThanOneSwaprTrade = async (): Promise<{
         SWAPS_QUERY,
         { block: MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK }
     );
-    const mainnetSwappers = mainnetSwaps.map((swap) => swap.from);
-
+    const mainnetSwappers = mainnetSwaps.map((swap) => getAddress(swap.from));
     const xDaiSwaps = await getAllDataFromSubgraph<Swap>(
         SWAPR_XDAI_SUBGRAPH_CLIENT,
         SWAPS_QUERY,
         { block: MARKETING_AIRDROP_XDAI_SNAPSHOT_BLOCK }
     );
-    const xDaiSwappers = xDaiSwaps.map((swap) => swap.from);
+    const xDaiSwappers = xDaiSwaps.map((swap) => getAddress(swap.from));
 
     const allSwappers = [...mainnetSwappers, ...xDaiSwappers];
-    const filteredSwappers = Array.from(
-        new Set(
-            Object.entries(
-                allSwappers.reduce(
-                    (accumulator: { [address: string]: number }, swapper) => {
-                        accumulator[swapper] = (accumulator[swapper] || 0) + 1;
-                        return accumulator;
-                    },
-                    {}
-                )
+    const filteredSwappers = getDeduplicatedAddresses(
+        Object.entries(
+            allSwappers.reduce(
+                (accumulator: { [address: string]: number }, swapper) => {
+                    accumulator[swapper] = (accumulator[swapper] || 0) + 1;
+                    return accumulator;
+                },
+                {}
             )
-                .filter(([, numberOfSwaps]) => numberOfSwaps > 1)
-                .map(([address]) => address)
         )
+            .filter(([, numberOfSwaps]) => numberOfSwaps > 1)
+            .map(([address]) => address)
     );
 
     const { mainnetFilteredSwappers, xDaiFilteredSwappers } =
@@ -114,7 +113,7 @@ export const getWhitelistMoreThanOneSwaprTrade = async (): Promise<{
                 },
                 swapper
             ) => {
-                if (mainnetSwappers.indexOf(swapper) >= 0)
+                if (mainnetSwappers.indexOf(getAddress(swapper)) >= 0)
                     accumulator.mainnetFilteredSwappers.push(swapper);
                 else accumulator.xDaiFilteredSwappers.push(swapper);
                 return accumulator;
@@ -127,7 +126,7 @@ export const getWhitelistMoreThanOneSwaprTrade = async (): Promise<{
     const { eoas: rawXDaiEoas, smartContracts: rawXDaiSmartContracts } =
         await getEoaAddresses(xDaiFilteredSwappers, XDAI_PROVIDER);
 
-    eoas = [...rawMainnetEoas, ...rawXDaiEoas];
+    eoas = getDeduplicatedAddresses([...rawMainnetEoas, ...rawXDaiEoas]);
     mainnetSmartContracts = rawMainnetSmartContracts;
     xDaiSmartContracts = rawXDaiSmartContracts;
 

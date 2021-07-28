@@ -1,6 +1,7 @@
 // taken from https://github.com/hexyls/omen-airdrop/blob/master/index.js
 
 import {
+    getDeduplicatedAddresses,
     getEoaAddresses,
     loadCache,
     logInPlace,
@@ -228,7 +229,7 @@ export const getCPKOwners = async (
             ).toFixed(2)}%`
         );
     }
-    console.log();
+    logInPlace("");
     return owners;
 };
 
@@ -246,7 +247,7 @@ export const getWhitelistOmenUsers = async (): Promise<{
         xDaiSmartContracts.length > 0
     ) {
         console.log(
-            `omen users from cache: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnet smart contracts, ${xDaiSmartContracts.length} xdai smart contracts`
+            `omen users: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnet smart contracts, ${xDaiSmartContracts.length} xdai smart contracts`
         );
         return { eoas, mainnetSmartContracts, xDaiSmartContracts };
     }
@@ -255,10 +256,13 @@ export const getWhitelistOmenUsers = async (): Promise<{
     const xdaiData = await getAddresses(GRAPH_XDAI_HTTP, xdaiProvider);
 
     const mainnetPotentialProxies = Array.from(
-        new Set([...mainnetData.users, ...mainnetData.lps])
+        getDeduplicatedAddresses([
+            ...mainnetData.users,
+            ...mainnetData.lps,
+        ] as string[])
     );
     const mainnetProxyOwners = Array.from(
-        new Set(
+        getDeduplicatedAddresses(
             await getCPKOwners(
                 mainnetPotentialProxies as string[],
                 MAINNET_PROVIDER
@@ -269,24 +273,26 @@ export const getWhitelistOmenUsers = async (): Promise<{
         await getEoaAddresses(mainnetProxyOwners, MAINNET_PROVIDER);
 
     const xDaiPotentialProxies = Array.from(
-        new Set([...xdaiData.users, ...xdaiData.lps])
+        getDeduplicatedAddresses([
+            ...xdaiData.users,
+            ...xdaiData.lps,
+        ] as string[])
     );
     const xDaiProxyOwners = Array.from(
-        new Set(
+        getDeduplicatedAddresses(
             await getCPKOwners(xDaiPotentialProxies as string[], XDAI_PROVIDER)
         )
     );
     const { eoas: rawXDaiEoas, smartContracts: rawXDaiSmartContracts } =
         await getEoaAddresses(xDaiProxyOwners, XDAI_PROVIDER);
 
-    eoas = [...rawMainnetEoas, ...rawXDaiEoas];
+    eoas = getDeduplicatedAddresses([...rawMainnetEoas, ...rawXDaiEoas]);
     mainnetSmartContracts = rawMainnetSmartContracts;
     xDaiSmartContracts = rawXDaiSmartContracts;
 
     console.log(
         `omen users: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnets scs, ${xDaiSmartContracts.length} xdai scs`
     );
-    console.log();
     saveCache(eoas, EOA_CACHE_LOCATION);
     saveCache(mainnetSmartContracts, MAINNET_SC_CACHE_LOCATION);
     saveCache(xDaiSmartContracts, XDAI_SC_CACHE_LOCATION);

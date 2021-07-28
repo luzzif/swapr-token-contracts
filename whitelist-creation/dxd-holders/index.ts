@@ -206,7 +206,7 @@ export const getWhitelistDxdHolders = async (): Promise<{
         xDaiSmartContracts.length > 0
     ) {
         console.log(
-            `dxd holders from cache: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnet scs, ${xDaiSmartContracts.length} xdai scs`
+            `dxd holders: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnet scs, ${xDaiSmartContracts.length} xdai scs`
         );
         return { eoas, mainnetSmartContracts, xDaiSmartContracts };
     }
@@ -242,7 +242,6 @@ export const getWhitelistDxdHolders = async (): Promise<{
             BigNumber.from("15040609"), // dxd token proxy deployment block
             DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK
         );
-        console.log("before saving xdai stuff");
         saveBalanceMapCache(pureXDaiHolders, XDAI_PURE_HOLDERS_CACHE_LOCATION);
     }
 
@@ -253,17 +252,12 @@ export const getWhitelistDxdHolders = async (): Promise<{
     mergeBalanceMaps(allXDaiHolders, xDaiMesaBalances);
     mergeBalanceMaps(allXDaiHolders, xDaiSwaprBalances);
     mergeBalanceMaps(allXDaiHolders, honeyswapLpBalances);
-    console.log("all xdai holders", Object.keys(allXDaiHolders).length);
 
     // get deduplicated addresses that are not on the blacklist
     const notOnBlacklistXDaiAddresses = getDeduplicatedAddresses(
         Object.entries(allXDaiHolders)
             .filter(([address]) => blacklist.indexOf(getAddress(address)) < 0)
             .map(([address]) => getAddress(address))
-    );
-    console.log(
-        "non blacklisted xdai holders",
-        notOnBlacklistXDaiAddresses.length
     );
     // separate eoas from smart contracts for non-blacklisted addresses
     const { smartContracts: rawXDaiSmartContracts, eoas: rawXDaiEoas } =
@@ -281,7 +275,6 @@ export const getWhitelistDxdHolders = async (): Promise<{
             BigNumber.from("10012634"), // dxd token deployment block
             DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK
         );
-        console.log("before saving mainnet stuff");
         saveBalanceMapCache(
             pureMainnetHolders,
             MAINNET_PURE_HOLDERS_CACHE_LOCATION
@@ -297,17 +290,12 @@ export const getWhitelistDxdHolders = async (): Promise<{
     mergeBalanceMaps(allMainnetHolders, loopringBalances);
     mergeBalanceMaps(allMainnetHolders, uniswapV2LpBalances);
     mergeBalanceMaps(allMainnetHolders, balancerLpBalances);
-    console.log("all mainnet holders", Object.keys(allXDaiHolders).length);
 
     // get deduplicated addresses that are not on the blacklist
     const notOnBlacklistMainnetAddresses = getDeduplicatedAddresses(
         Object.entries(allMainnetHolders)
             .filter(([address]) => blacklist.indexOf(getAddress(address)) < 0)
             .map(([address]) => getAddress(address))
-    );
-    console.log(
-        "non blacklisted mainnet holders",
-        notOnBlacklistMainnetAddresses.length
     );
     // separate eoas from smart contracts for non-blacklisted addresses
     const { smartContracts: rawMainnetSmartContracts, eoas: rawMainnetEoas } =
@@ -316,7 +304,6 @@ export const getWhitelistDxdHolders = async (): Promise<{
     // get a cross-chain balances map
     const crossChainBalanceMap = allMainnetHolders;
     mergeBalanceMaps(crossChainBalanceMap, allXDaiHolders);
-    console.log("Before", Object.keys(crossChainBalanceMap).length);
     // filter out accounts that hold less than the minimum threshold and/or are blacklisted
     const eligibleAddresses = Object.entries(crossChainBalanceMap)
         .filter(
@@ -325,7 +312,6 @@ export const getWhitelistDxdHolders = async (): Promise<{
                 balance.gt(MINIMUM_HOLDINGS)
         )
         .map(([address]) => getAddress(address));
-    console.log("After", eligibleAddresses.length);
 
     // cross-reference data from eligible addresses and eoas across chains to
     // determine which eoas are eligible for the airdrop

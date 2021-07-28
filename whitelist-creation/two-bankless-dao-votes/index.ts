@@ -1,12 +1,16 @@
 import { gql } from "graphql-request";
 import {
+    getDeduplicatedAddresses,
+    getEoaAddresses,
     loadCache,
+    MAINNET_PROVIDER,
     MARKETING_AIRDROP_TIME_LIMIT,
     saveCache,
     SNAPSHOT_CLIENT,
 } from "../commons";
 
-const CACHE_LOCATION = `${__dirname}/cache.json`;
+const EOA_CACHE_LOCATION = `${__dirname}/cache/eoas.json`;
+const SC_CACHE_LOCATION = `${__dirname}/cache/scs.json`;
 
 const PROPOSALS_QUERY = gql`
     query getProposals($skip: Int!) {
@@ -83,31 +87,42 @@ const getSubgraphData = async (): Promise<Vote[]> => {
     return votes;
 };
 
-export const getWhitelistMoreThanOneBanklessDaoVote = async () => {
-    let eligibleVoters = loadCache(CACHE_LOCATION);
-    if (eligibleVoters.length > 0) {
+export const getWhitelistMoreThanOneBanklessDaoVote = async (): Promise<{
+    eoas: string[];
+    smartContracts: string[];
+}> => {
+    let eoas = loadCache(EOA_CACHE_LOCATION);
+    let smartContracts = loadCache(SC_CACHE_LOCATION);
+    if (eoas.length > 0 || smartContracts.length > 0) {
         console.log(
-            `number of bankless dao voters from cache that voted more than once: ${eligibleVoters.length}`
+            `bankless dao voters: ${eoas.length} eoas, ${smartContracts.length} scs`
         );
-        return eligibleVoters;
+        return { eoas, smartContracts };
     }
     const votes = await getSubgraphData();
-    eligibleVoters = Object.entries(
-        votes.reduce((accumulator: { [voter: string]: number }, vote) => {
-            const { voter } = vote;
-            accumulator[voter] = (accumulator[voter] || 0) + 1;
+    const rawVoters = getDeduplicatedAddresses(
+        Object.entries(
+            votes.reduce((accumulator: { [voter: string]: number }, vote) => {
+                const { voter } = vote;
+                accumulator[voter] = (accumulator[voter] || 0) + 1;
+                return accumulator;
+            }, {})
+        ).reduce((accumulator: string[], [swapper, numberOfVotes]) => {
+            if (numberOfVotes < 2) return accumulator;
+            accumulator.push(swapper);
             return accumulator;
-        }, {})
-    ).reduce((accumulator: string[], [swapper, numberOfVotes]) => {
-        if (numberOfVotes < 2) return accumulator;
-        accumulator.push(swapper);
-        return accumulator;
-    }, []);
+        }, [])
+    );
+
+    const { smartContracts: rawSmartContracts, eoas: rawEoas } =
+        await getEoaAddresses(rawVoters, MAINNET_PROVIDER);
+    eoas = rawEoas;
+    smartContracts = rawSmartContracts;
 
     console.log(
-        `number of addresses that voted more than once on bankless dao: ${eligibleVoters.length}`
+        `bankless dao voters: ${eoas.length} eoas, ${smartContracts.length} scs`
     );
-    console.log();
-    saveCache(eligibleVoters, CACHE_LOCATION);
-    return eligibleVoters;
+    saveCache(rawEoas, EOA_CACHE_LOCATION);
+    saveCache(rawSmartContracts, SC_CACHE_LOCATION);
+    return { eoas, smartContracts };
 };
