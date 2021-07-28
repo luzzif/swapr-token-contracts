@@ -4,6 +4,7 @@ import fs from "fs";
 import { outputJSONSync } from "fs-extra";
 import { Client } from "jayson";
 import url from "url";
+import { getAddress } from "ethers/lib/utils";
 
 export const UNISWAP_MAINNET_SUBGRAPH_CLIENT = new GraphQLClient(
     "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2"
@@ -167,4 +168,43 @@ export const getEoaAddresses = async (
     }
     console.log();
     return { eoas, smartContracts };
+};
+
+export const getDeduplicatedAddresses = (addresses: string[]) => {
+    return Array.from(new Set(addresses.map(getAddress)));
+};
+
+export const saveBalanceMapCache = (
+    balanceMap: { [address: string]: BigNumber },
+    location: string
+) => {
+    outputJSONSync(
+        location,
+        Object.entries(balanceMap).reduce(
+            (
+                accumulator: { [address: string]: string },
+                [address, balance]
+            ) => {
+                accumulator[address] = balance.toString();
+                return accumulator;
+            },
+            {}
+        ),
+        { spaces: 4 }
+    );
+};
+
+export const loadBalanceMapCache = (
+    location: string
+): { [address: string]: BigNumber } => {
+    if (!fs.existsSync(location)) return {};
+    return Object.entries(
+        JSON.parse(fs.readFileSync(location).toString())
+    ).reduce(
+        (accumulator: { [address: string]: BigNumber }, [address, balance]) => {
+            accumulator[address] = BigNumber.from(balance);
+            return accumulator;
+        },
+        {}
+    );
 };

@@ -11,16 +11,26 @@ import {
     DXD_VESTING_FACTORY_ADDRESS,
     logInPlace,
     getEoaAddresses,
+    getDeduplicatedAddresses,
+    saveBalanceMapCache,
+    loadBalanceMapCache,
 } from "../commons";
 import { getHoneyswapDxdLiquidityProviders } from "./honeyswap-lps";
 import { getUniswapV2DxdLiquidityProviders } from "./uniswap-v2-lps";
 import vestingFactoryAbi from "./abis/vesting-factory.json";
 import erc20Abi from "../abis/erc20.json";
-import { parseEther } from "ethers/lib/utils";
+import { getAddress, parseEther } from "ethers/lib/utils";
 import { getBalancerDxdLiquidityProviders } from "./balancer-lps";
 import { getMesaDxdHolders } from "./mesa";
 import { getSwaprDxdLiquidityProviders } from "./swapr";
 import { getLoopringDxdHolders } from "./loopring";
+
+const EOA_CACHE_LOCATION = `${__dirname}/cache/eoas.json`;
+const MAINNET_SC_CACHE_LOCATION = `${__dirname}/cache/mainnet-scs.json`;
+const XDAI_SC_CACHE_LOCATION = `${__dirname}/cache/xdai-scs.json`;
+const MAINNET_VESTING_CONTRACTS_CACHE_LOCATION = `${__dirname}/cache/mainnet-vesting-scs.json`;
+const MAINNET_PURE_HOLDERS_CACHE_LOCATION = `${__dirname}/cache/mainnet-holders.json`;
+const XDAI_PURE_HOLDERS_CACHE_LOCATION = `${__dirname}/cache/xdai-holders.json`;
 
 // in order to be included in the airdrop, a minimum of 0.5 DXD has to be held
 const MINIMUM_HOLDINGS = parseEther("0.5");
@@ -63,7 +73,10 @@ const STATIC_AIRDROP_RECIPIENT_BLACKLIST = [
     "0xc0ef25b17AC4012C2961f6C5E16919b994B2d982", // Farming campaign
     "0xB145FBA04C22CA35c2Dca96E6CBa2Ec2d7a71Ec8", // Farming campaign
     "0x25B06305CC4ec6AfCF3E7c0b673da1EF8ae26313", // Mesa
-];
+    "0xA369a0b81ee984a470EA0acf41EF9DdcDB5f7B46", // Gnosis protocol relayer
+    "0x65f29020d07A6CFa3B0bF63d749934d5A6E6ea18", // Swapr fee receiver
+    "0x61e7864d7174d83e5771bd8e75f201d95d2110ed", // Aragon stuff
+].map(getAddress);
 
 const getDxdTokenHoldersWithBalances = async (
     provider: providers.JsonRpcProvider,
@@ -126,6 +139,8 @@ const getDxdTokenHoldersWithBalances = async (
 };
 
 const getMainnetDxdVestingContractAddresses = async () => {
+    let addresses = loadCache(MAINNET_VESTING_CONTRACTS_CACHE_LOCATION);
+    if (addresses.length > 0) return addresses;
     const vestingContractAddresses = new Set<string>();
     const vestingFactoryContract = new Contract(
         DXD_VESTING_FACTORY_ADDRESS,
@@ -160,27 +175,46 @@ const getMainnetDxdVestingContractAddresses = async () => {
     console.log();
     console.log(`detected ${vestingContractAddresses.size} vesting contracts`);
 
-    return Array.from(vestingContractAddresses);
+    addresses = Array.from(vestingContractAddresses);
+    saveCache(addresses, MAINNET_VESTING_CONTRACTS_CACHE_LOCATION);
+    return addresses;
 };
 
-export const getWhitelistDxdHolders = async () => {
-    let eligibleAddresses = await loadCache(`${__dirname}/cache.json`);
-    if (eligibleAddresses.length > 0) {
-        console.log(
-            `number of single non-zero dxd holders from cache: ${eligibleAddresses.length}`
+const mergeBalanceMaps = (
+    outputMap: { [address: string]: BigNumber },
+    inputMap: { [address: string]: BigNumber }
+) => {
+    Object.entries(inputMap).forEach(([account, balance]) => {
+        outputMap[account] = (outputMap[account] || BigNumber.from(0)).add(
+            balance
         );
-        return eligibleAddresses;
+    });
+};
+
+export const getWhitelistDxdHolders = async (): Promise<{
+    eoas: string[];
+    mainnetSmartContracts: string[];
+    xDaiSmartContracts: string[];
+}> => {
+    let eoas = await loadCache(EOA_CACHE_LOCATION);
+    let mainnetSmartContracts = await loadCache(MAINNET_SC_CACHE_LOCATION);
+    let xDaiSmartContracts = await loadCache(XDAI_SC_CACHE_LOCATION);
+    // load data from cache if available
+    if (
+        eoas.length > 0 ||
+        mainnetSmartContracts.length > 0 ||
+        xDaiSmartContracts.length > 0
+    ) {
+        console.log(
+            `dxd holders from cache: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnet scs, ${xDaiSmartContracts.length} xdai scs`
+        );
+        return { eoas, mainnetSmartContracts, xDaiSmartContracts };
     }
 
     const {
         xDaiHolders: xDaiSwaprBalances,
         mainnetHolders: mainnetSwaprBalances,
     } = await getSwaprDxdLiquidityProviders();
-    console.log(
-        `fetched ${Object.keys(xDaiSwaprBalances).length} xdai lps and ${
-            Object.keys(mainnetSwaprBalances).length
-        } mainnet swapr dxd lps`
-    );
     const loopringBalances = await getLoopringDxdHolders();
     const {
         xDaiHolders: xDaiMesaBalances,
@@ -190,96 +224,140 @@ export const getWhitelistDxdHolders = async () => {
     const uniswapV2LpBalances = await getUniswapV2DxdLiquidityProviders();
     const balancerLpBalances = await getBalancerDxdLiquidityProviders();
 
-    const vestingContractAddresses =
-        await getMainnetDxdVestingContractAddresses();
-    const blacklist = [
+    const vestingContractAddresses = (
+        await getMainnetDxdVestingContractAddresses()
+    ).map(getAddress);
+    const blacklist = getDeduplicatedAddresses([
         ...STATIC_AIRDROP_RECIPIENT_BLACKLIST,
         ...vestingContractAddresses,
-    ];
+    ]);
 
-    const xDaiHolders = await getDxdTokenHoldersWithBalances(
-        XDAI_PROVIDER,
-        DXD_XDAI_ADDRESS,
-        BigNumber.from("15040609"), // dxd token proxy deployment block
-        DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK
-    );
-    const { smartContracts: xDaiSmartContractHolders } = await getEoaAddresses(
-        Object.entries({
-            ...xDaiHolders,
-            ...xDaiMesaBalances,
-            ...xDaiSwaprBalances,
-        })
-            .filter(
-                ([address, balance]) =>
-                    blacklist.indexOf(address) < 0 &&
-                    balance.gt(MINIMUM_HOLDINGS)
-            )
-            .map(([address]) => address),
-        XDAI_PROVIDER
-    );
-
-    const mainnetHolders = await getDxdTokenHoldersWithBalances(
-        MAINNET_PROVIDER,
-        DXD_MAINNET_ADDRESS,
-        BigNumber.from("10012634"), // dxd token deployment block
-        DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK
-    );
-    const { smartContracts: mainnetSmartContractHolders } =
-        await getEoaAddresses(
-            Object.entries({
-                ...mainnetHolders,
-                ...uniswapV2LpBalances,
-                ...balancerLpBalances,
-                ...mainnetMesaBalances,
-                ...mainnetSwaprBalances,
-            })
-                .filter(
-                    ([address, balance]) =>
-                        blacklist.indexOf(address) < 0 &&
-                        balance.gt(MINIMUM_HOLDINGS)
-                )
-                .map(([address]) => address),
-            MAINNET_PROVIDER
+    // fetch "pure" xDai holders. I.e. addresses that currently hold
+    // DXD (doesn't account for liquidity deposited in protocols etc)
+    let pureXDaiHolders = loadBalanceMapCache(XDAI_PURE_HOLDERS_CACHE_LOCATION);
+    if (!pureXDaiHolders || Object.keys(pureXDaiHolders).length === 0) {
+        pureXDaiHolders = await getDxdTokenHoldersWithBalances(
+            XDAI_PROVIDER,
+            DXD_XDAI_ADDRESS,
+            BigNumber.from("15040609"), // dxd token proxy deployment block
+            DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK
         );
+        console.log("before saving xdai stuff");
+        saveBalanceMapCache(pureXDaiHolders, XDAI_PURE_HOLDERS_CACHE_LOCATION);
+    }
 
-    const balanceMap: { [address: string]: BigNumber } = {
-        ...honeyswapLpBalances,
-        ...uniswapV2LpBalances,
-        ...balancerLpBalances,
-        ...xDaiMesaBalances,
-        ...mainnetMesaBalances,
-        ...xDaiSwaprBalances,
-        ...mainnetSwaprBalances,
-        ...xDaiHolders,
-        ...mainnetHolders,
-        ...loopringBalances,
-    };
+    // merge together data from pure holders, Mesa, Swapr and Honeyswap
+    // protocols on xDai to get a better picture
+    const allXDaiHolders: { [address: string]: BigNumber } = {};
+    mergeBalanceMaps(allXDaiHolders, pureXDaiHolders);
+    mergeBalanceMaps(allXDaiHolders, xDaiMesaBalances);
+    mergeBalanceMaps(allXDaiHolders, xDaiSwaprBalances);
+    mergeBalanceMaps(allXDaiHolders, honeyswapLpBalances);
+    console.log("all xdai holders", Object.keys(allXDaiHolders).length);
 
-    eligibleAddresses = Object.entries(balanceMap)
+    // get deduplicated addresses that are not on the blacklist
+    const notOnBlacklistXDaiAddresses = getDeduplicatedAddresses(
+        Object.entries(allXDaiHolders)
+            .filter(([address]) => blacklist.indexOf(getAddress(address)) < 0)
+            .map(([address]) => getAddress(address))
+    );
+    console.log(
+        "non blacklisted xdai holders",
+        notOnBlacklistXDaiAddresses.length
+    );
+    // separate eoas from smart contracts for non-blacklisted addresses
+    const { smartContracts: rawXDaiSmartContracts, eoas: rawXDaiEoas } =
+        await getEoaAddresses(notOnBlacklistXDaiAddresses, XDAI_PROVIDER);
+
+    // fetch "pure" mainnet holders. I.e. addresses that currently hold
+    // DXD (doesn't account for liquidity deposited in protocols etc)
+    let pureMainnetHolders = loadBalanceMapCache(
+        MAINNET_PURE_HOLDERS_CACHE_LOCATION
+    );
+    if (!pureMainnetHolders || Object.keys(pureMainnetHolders).length === 0) {
+        pureMainnetHolders = await getDxdTokenHoldersWithBalances(
+            MAINNET_PROVIDER,
+            DXD_MAINNET_ADDRESS,
+            BigNumber.from("10012634"), // dxd token deployment block
+            DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK
+        );
+        console.log("before saving mainnet stuff");
+        saveBalanceMapCache(
+            pureMainnetHolders,
+            MAINNET_PURE_HOLDERS_CACHE_LOCATION
+        );
+    }
+
+    // merge together data from pure holders, Mesa, Swapr, Loopring, Uniswap v2
+    // and Balancer v1 protocols on mainnet to get a better picture
+    const allMainnetHolders: { [address: string]: BigNumber } = {};
+    mergeBalanceMaps(allMainnetHolders, pureMainnetHolders);
+    mergeBalanceMaps(allMainnetHolders, mainnetMesaBalances);
+    mergeBalanceMaps(allMainnetHolders, mainnetSwaprBalances);
+    mergeBalanceMaps(allMainnetHolders, loopringBalances);
+    mergeBalanceMaps(allMainnetHolders, uniswapV2LpBalances);
+    mergeBalanceMaps(allMainnetHolders, balancerLpBalances);
+    console.log("all mainnet holders", Object.keys(allXDaiHolders).length);
+
+    // get deduplicated addresses that are not on the blacklist
+    const notOnBlacklistMainnetAddresses = getDeduplicatedAddresses(
+        Object.entries(allMainnetHolders)
+            .filter(([address]) => blacklist.indexOf(getAddress(address)) < 0)
+            .map(([address]) => getAddress(address))
+    );
+    console.log(
+        "non blacklisted mainnet holders",
+        notOnBlacklistMainnetAddresses.length
+    );
+    // separate eoas from smart contracts for non-blacklisted addresses
+    const { smartContracts: rawMainnetSmartContracts, eoas: rawMainnetEoas } =
+        await getEoaAddresses(notOnBlacklistMainnetAddresses, MAINNET_PROVIDER);
+
+    // get a cross-chain balances map
+    const crossChainBalanceMap = allMainnetHolders;
+    mergeBalanceMaps(crossChainBalanceMap, allXDaiHolders);
+    console.log("Before", Object.keys(crossChainBalanceMap).length);
+    // filter out accounts that hold less than the minimum threshold and/or are blacklisted
+    const eligibleAddresses = Object.entries(crossChainBalanceMap)
         .filter(
             ([address, balance]) =>
-                blacklist.indexOf(address) < 0 && balance.gt(MINIMUM_HOLDINGS)
+                blacklist.indexOf(getAddress(address)) < 0 &&
+                balance.gt(MINIMUM_HOLDINGS)
         )
-        .map(([address]) => address);
-    console.log(`${eligibleAddresses.length} dxd holders eligible for airdrop`);
+        .map(([address]) => getAddress(address));
+    console.log("After", eligibleAddresses.length);
 
-    saveCache(eligibleAddresses, `${__dirname}/cache.json`);
-    saveCache(
-        mainnetSmartContractHolders.filter(
-            (address) =>
-                blacklist.indexOf(address) < 0 &&
-                balanceMap[address].gt(MINIMUM_HOLDINGS)
-        ),
-        `${__dirname}/smart-contracts.mainnet.json`
-    );
-    saveCache(
-        xDaiSmartContractHolders.filter(
-            (address) =>
-                blacklist.indexOf(address) < 0 &&
-                balanceMap[address].gt(MINIMUM_HOLDINGS)
-        ),
-        `${__dirname}/smart-contracts.xdai.json`
+    // cross-reference data from eligible addresses and eoas across chains to
+    // determine which eoas are eligible for the airdrop
+    eoas = getDeduplicatedAddresses(
+        [...rawMainnetEoas, ...rawXDaiEoas].filter(
+            (address) => eligibleAddresses.indexOf(getAddress(address)) >= 0
+        )
     );
 
-    return eligibleAddresses;
+    // cross-reference data from eligible addresses and mainnet scs to
+    // determine which mainnet scs are eligible for the airdrop
+    mainnetSmartContracts = getDeduplicatedAddresses(
+        rawMainnetSmartContracts.filter(
+            (address) => eligibleAddresses.indexOf(getAddress(address)) >= 0
+        )
+    );
+
+    // cross-reference data from eligible addresses and xdai scs to
+    // determine which xdai scs are eligible for the airdrop
+    xDaiSmartContracts = getDeduplicatedAddresses(
+        rawXDaiSmartContracts.filter(
+            (address) => eligibleAddresses.indexOf(getAddress(address)) >= 0
+        )
+    );
+
+    console.log(
+        `dxd holders: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnet scs, ${xDaiSmartContracts.length} xdai scs`
+    );
+
+    saveCache(eoas, EOA_CACHE_LOCATION);
+    saveCache(mainnetSmartContracts, MAINNET_SC_CACHE_LOCATION);
+    saveCache(xDaiSmartContracts, XDAI_SC_CACHE_LOCATION);
+
+    return { eoas, mainnetSmartContracts, xDaiSmartContracts };
 };
