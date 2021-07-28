@@ -8,7 +8,7 @@ const hashLeaf = (leaf: Leaf) => {
     );
 };
 
-interface Leaf {
+export interface Leaf {
     account: string;
     amount: string;
 }
