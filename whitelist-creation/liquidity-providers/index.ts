@@ -64,11 +64,6 @@ const LIQUIDITY_POSITIONS_QUERY = gql`
     }
 `;
 
-interface LiquidityPosition {
-    id: string;
-    user: { id: string };
-}
-
 const LIQUIDITY_MINING_POSITIONS_QUERY = gql`
     query getLiquidityMiningPositions($lastId: ID, $block: Int!) {
         data: liquidityMiningPositions(
