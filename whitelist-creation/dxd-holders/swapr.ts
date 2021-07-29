@@ -10,7 +10,7 @@ import {
     SWAPR_XDAI_SUBGRAPH_CLIENT,
 } from "../commons";
 import { Decimal } from "decimal.js-light";
-import { parseEther } from "ethers/lib/utils";
+import { getAddress, parseEther } from "ethers/lib/utils";
 
 const PAIRS_TOKEN0_QUERY = gql`
     query getPairsDxdToken0($block: Int!, $address: String!, $lastId: ID) {
@@ -62,6 +62,35 @@ const LIQUIDITY_POSITIONS_QUERY = gql`
     }
 `;
 
+const LIQUIDITY_MINING_POSITIONS_QUERY = gql`
+    query getLiquidityMiningPositions(
+        $lastId: ID
+        $block: Int!
+        $pairIds: [ID!]!
+    ) {
+        data: liquidityMiningPositions(
+            block: { number: $block }
+            where: {
+                user_not_in: ["0x0000000000000000000000000000000000000000"]
+                id_gt: $lastId
+                targetedPair_in: $pairIds
+                stakedAmount_gt: 0
+            }
+        ) {
+            id
+            user {
+                address: id
+            }
+            liquidityTokenBalance: stakedAmount
+            pair: targetedPair {
+                totalSupply
+                reserve0
+                reserve1
+            }
+        }
+    }
+`;
+
 interface LiquidityPosition {
     id: string;
     user: { address: string };
@@ -86,22 +115,66 @@ const getSubgraphData = async (
         PAIRS_TOKEN0_QUERY,
         { block, address: dxdAddress.toLowerCase() }
     );
-    const positionsByToken0 = await getAllDataFromSubgraph<LiquidityPosition>(
-        subgraphClient,
-        LIQUIDITY_POSITIONS_QUERY,
-        { block, pairIds: dxdPairsByToken0.map((pair) => pair.id) }
-    );
+    const standardPositionsByToken0 =
+        await getAllDataFromSubgraph<LiquidityPosition>(
+            subgraphClient,
+            LIQUIDITY_POSITIONS_QUERY,
+            { block, pairIds: dxdPairsByToken0.map((pair) => pair.id) }
+        );
+    const stakedPositionsByToken0 =
+        await getAllDataFromSubgraph<LiquidityPosition>(
+            subgraphClient,
+            LIQUIDITY_MINING_POSITIONS_QUERY,
+            { block, pairIds: dxdPairsByToken0.map((pair) => pair.id) }
+        );
+    // merging standard and staked positions
+    const positionsByToken0: LiquidityPosition[] = standardPositionsByToken0;
+    stakedPositionsByToken0.forEach((stakedPosition) => {
+        const index = positionsByToken0.findIndex(
+            (p) =>
+                getAddress(p.user.address) ===
+                getAddress(stakedPosition.user.address)
+        );
+        if (index >= 0)
+            positionsByToken0[index].liquidityTokenBalance = new Decimal(
+                positionsByToken0[index].liquidityTokenBalance
+            )
+                .plus(stakedPosition.liquidityTokenBalance)
+                .toString();
+    }, []);
 
     const dxdPairsByToken1 = await getAllDataFromSubgraph<Pair>(
         subgraphClient,
         PAIRS_TOKEN1_QUERY,
         { block, address: dxdAddress.toLowerCase() }
     );
-    const positionsByToken1 = await getAllDataFromSubgraph<LiquidityPosition>(
-        subgraphClient,
-        LIQUIDITY_POSITIONS_QUERY,
-        { block, pairIds: dxdPairsByToken1.map((pair) => pair.id) }
-    );
+    const standardPositionsByToken1 =
+        await getAllDataFromSubgraph<LiquidityPosition>(
+            subgraphClient,
+            LIQUIDITY_POSITIONS_QUERY,
+            { block, pairIds: dxdPairsByToken1.map((pair) => pair.id) }
+        );
+    const stakedPositionsByToken1 =
+        await getAllDataFromSubgraph<LiquidityPosition>(
+            subgraphClient,
+            LIQUIDITY_MINING_POSITIONS_QUERY,
+            { block, pairIds: dxdPairsByToken1.map((pair) => pair.id) }
+        );
+    // merging standard and staked positions
+    const positionsByToken1: LiquidityPosition[] = standardPositionsByToken1;
+    stakedPositionsByToken1.forEach((stakedPosition) => {
+        const index = positionsByToken1.findIndex(
+            (p) =>
+                getAddress(p.user.address) ===
+                getAddress(stakedPosition.user.address)
+        );
+        if (index >= 0)
+            positionsByToken1[index].liquidityTokenBalance = new Decimal(
+                positionsByToken1[index].liquidityTokenBalance
+            )
+                .plus(stakedPosition.liquidityTokenBalance)
+                .toString();
+    }, []);
 
     return { positionsByToken0, positionsByToken1 };
 };
