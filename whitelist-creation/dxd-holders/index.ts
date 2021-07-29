@@ -123,7 +123,7 @@ const getDxdTokenHoldersWithBalances = async (
         });
         lastAnalyzedBlock = toBlock;
     }
-    logInPlace("reconstructing dxd balance map: 100%");
+    logInPlace("");
     console.log();
     return Object.entries(holdersMap)
         .filter(([, balance]) => !balance.isZero())
@@ -172,7 +172,7 @@ const getMainnetDxdVestingContractAddresses = async () => {
 
         lastAnalyzedBlock = toBlock;
     }
-    logInPlace("getting vesting contracts creations: 100%");
+    logInPlace("");
     console.log();
     console.log(`detected ${vestingContractAddresses.size} vesting contracts`);
 

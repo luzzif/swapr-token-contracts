@@ -97,7 +97,7 @@ export const getWhitelist1InchVoters = async (): Promise<{
 
         lastAnalyzedBlock = toBlock;
     }
-    logInPlace("fetching 1inch governance voters: 100%");
+    logInPlace("");
     console.log();
 
     const voters = Object.entries(voteCounter)

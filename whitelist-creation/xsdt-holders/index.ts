@@ -69,7 +69,7 @@ const getXSdtTokenHoldersWithBalances = async () => {
         });
         lastAnalyzedBlock = toBlock;
     }
-    logInPlace("reconstructing xsdt balance map: 100%");
+    logInPlace("");
     console.log();
     return Object.entries(holdersMap)
         .filter(([, balance]) => !balance.isZero())

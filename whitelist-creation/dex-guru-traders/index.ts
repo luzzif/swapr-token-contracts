@@ -60,7 +60,7 @@ export const getWhitelistDexGuruTraders = async (): Promise<{
             .filter((trader) => trader.stats.tradeCount.taker > 2)
             .forEach((trader) => traders.push(trader.address));
     } while (page < pageCount);
-    console.log();
+    logInPlace("");
 
     const { eoas: rawEoas, smartContracts: rawSmartContracts } =
         await getEoaAddresses(

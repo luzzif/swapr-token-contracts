@@ -183,7 +183,7 @@ const getMesaBalances = async (
         });
         lastAnalyzedBlock = toBlock;
     }
-    logInPlace("reconstructing dxd balances on mesa: 100%");
+    logInPlace("");
     console.log();
     return Object.entries(balanceMap)
         .filter(([, balance]) => !balance.isZero())
