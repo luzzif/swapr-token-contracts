@@ -1,6 +1,6 @@
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
 /**
  * @title SWPR
@@ -8,8 +8,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
  * @author Federico Luzzi - <fedeluzzi00@gmail.com>
  * SPDX-License-Identifier: GPL-3.0
  */
-contract SWPR is ERC20 {
-    constructor(address _dxDaoAddress) public ERC20("Swapr", "SWPR") {
-        _mint(_dxDaoAddress, 100000000 ether);
+contract SWPR is ERC20Burnable {
+    constructor(address _ownerAddress) ERC20("Swapr", "SWPR") {
+        _mint(_ownerAddress, 100000000 ether);
     }
 }
