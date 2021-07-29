@@ -10,9 +10,9 @@ import { getWhitelistXSdtHolders } from "./xsdt-holders";
 import { getWhitelist1InchVoters } from "./1inch-governance-voters";
 import { BigNumber } from "ethers";
 import { Leaf, MerkleTree } from "../merkle-tree";
-import { getAddress, parseEther } from "ethers/lib/utils";
+import { formatEther, getAddress, parseEther } from "ethers/lib/utils";
 import { outputJSONSync } from "fs-extra";
-import { logInPlace, mergeBalanceMaps } from "./commons";
+import { mergeBalanceMaps } from "./commons";
 
 const MARKETING_AIRDROP_EOA_JSON_LOCATION = `${__dirname}/cache/marketing-airdrop-eoa-leaves.json`;
 const MARKETING_AIRDROP_SC_JSON_LOCATION = `${__dirname}/cache/marketing-airdrop-sc-leaves.json`;
@@ -33,7 +33,7 @@ const getAmountsMap = (
 } => {
     const amountPerUser = overallAmount.div(
         eoas.length + smartContracts.length
-    );
+    ); // some integer truncation might occur
     return {
         eoas: eoas.reduce(
             (accumulator: { [address: string]: BigNumber }, account) => {
@@ -50,6 +50,15 @@ const getAmountsMap = (
             {}
         ),
     };
+};
+
+const getTotalAmountFromMap = (map: {
+    [address: string]: BigNumber;
+}): BigNumber => {
+    return Object.values(map).reduce(
+        (total: BigNumber, value) => total.add(value),
+        BigNumber.from(0)
+    );
 };
 
 const buildLeaves = (amountMap: { [address: string]: BigNumber }): Leaf[] => {
@@ -239,6 +248,13 @@ const createWhitelist = async () => {
         "marketing airdrop sc root",
         marketingAirdropSmartContractTree.root
     );
+    console.log(
+        `marketing airdrop required funding: ${formatEther(
+            getTotalAmountFromMap(eoaMarketingAmountsMap).add(
+                getTotalAmountFromMap(smartContractMarketingAmountsMap)
+            )
+        )}`
+    );
 
     const {
         eoas: dxdEoas,
@@ -257,6 +273,13 @@ const createWhitelist = async () => {
     console.log("dxd airdrop eoa root", dxdAirdropEoaTree.root);
     const dxdAirdropSmartContractTree = new MerkleTree(dxdSmartContractLeaves);
     console.log("dxd airdrop sc root", dxdAirdropSmartContractTree.root);
+    console.log(
+        `dxd airdrop required funding: ${formatEther(
+            getTotalAmountFromMap(dxdEoaAmounts).add(
+                getTotalAmountFromMap(dxdSmartContractAmounts)
+            )
+        )}`
+    );
 };
 
 createWhitelist().catch((error) => {
