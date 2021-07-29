@@ -18,6 +18,9 @@
         "prepare": "husky install",
         "deploy:test:rinkeby": "hardhat test-deploy --network rinkeby",
         "get-proof": "hardhat get-proof",
+        "deploy-token:rinkeby": "hardhat deploy-token --network rinkeby --verify",
+        "deploy-claimer:arbitrum-testnet": "hardhat deploy-claimer --network arbitrumTestnet",
+        "deploy-vested-claimer:arbitrum-testnet": "hardhat deploy-vested-claimer --network arbitrumTestnet",
         "create-whitelist": "ts-node whitelist-creation",
         "cache-clean": "rimraf ./whitelist-creation/**/cache"
     },

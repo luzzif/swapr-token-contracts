@@ -7,6 +7,9 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "./tasks/test-deploy";
 import "./tasks/get-proof";
+import "./tasks/deploy-token";
+import "./tasks/deploy-claimer";
+import "./tasks/deploy-vested-claimer";
 
 config();
 
@@ -22,8 +25,8 @@ const hardhatConfig: HardhatUserConfig = {
             url: `https://rinkeby.infura.io/v3/${infuraId}`,
             accounts,
         },
-        arbitrumTestnetV3: {
-            url: "https://kovan3.arbitrum.io/rpc",
+        arbitrumTestnet: {
+            url: "https://rinkeby.arbitrum.io/rpc",
             accounts,
             gasPrice: 0,
         },
