@@ -14,6 +14,7 @@ import {
     getDeduplicatedAddresses,
     saveBalanceMapCache,
     loadBalanceMapCache,
+    mergeBalanceMaps,
 } from "../commons";
 import { getHoneyswapDxdLiquidityProviders } from "./honeyswap-lps";
 import { getUniswapV2DxdLiquidityProviders } from "./uniswap-v2-lps";
@@ -180,25 +181,14 @@ const getMainnetDxdVestingContractAddresses = async () => {
     return addresses;
 };
 
-const mergeBalanceMaps = (
-    outputMap: { [address: string]: BigNumber },
-    inputMap: { [address: string]: BigNumber }
-) => {
-    Object.entries(inputMap).forEach(([account, balance]) => {
-        outputMap[account] = (outputMap[account] || BigNumber.from(0)).add(
-            balance
-        );
-    });
-};
-
 export const getWhitelistDxdHolders = async (): Promise<{
     eoas: string[];
     mainnetSmartContracts: string[];
     xDaiSmartContracts: string[];
 }> => {
-    let eoas = await loadCache(EOA_CACHE_LOCATION);
-    let mainnetSmartContracts = await loadCache(MAINNET_SC_CACHE_LOCATION);
-    let xDaiSmartContracts = await loadCache(XDAI_SC_CACHE_LOCATION);
+    let eoas = loadCache(EOA_CACHE_LOCATION);
+    let mainnetSmartContracts = loadCache(MAINNET_SC_CACHE_LOCATION);
+    let xDaiSmartContracts = loadCache(XDAI_SC_CACHE_LOCATION);
     // load data from cache if available
     if (
         eoas.length > 0 ||

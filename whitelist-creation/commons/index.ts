@@ -208,3 +208,14 @@ export const loadBalanceMapCache = (
         {}
     );
 };
+
+export const mergeBalanceMaps = (
+    outputMap: { [address: string]: BigNumber },
+    inputMap: { [address: string]: BigNumber }
+) => {
+    Object.entries(inputMap).forEach(([account, balance]) => {
+        outputMap[account] = (outputMap[account] || BigNumber.from(0)).add(
+            balance
+        );
+    });
+};

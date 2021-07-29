@@ -12,6 +12,7 @@ import { BigNumber } from "ethers";
 import { Leaf, MerkleTree } from "../merkle-tree";
 import { getAddress, parseEther } from "ethers/lib/utils";
 import { outputJSONSync } from "fs-extra";
+import { logInPlace, mergeBalanceMaps } from "./commons";
 
 const MARKETING_AIRDROP_EOA_JSON_LOCATION = `${__dirname}/cache/marketing-airdrop-eoa-leaves.json`;
 const MARKETING_AIRDROP_SC_JSON_LOCATION = `${__dirname}/cache/marketing-airdrop-sc-leaves.json`;
@@ -22,24 +23,40 @@ export const exportJsonLeaves = (leaves: Leaf[], location: string) => {
     outputJSONSync(location, leaves, { spaces: 4 });
 };
 
-const getMerkleTreeLeaves = async (
+const getAmountsMap = (
     overallAmount: BigNumber,
     eoas: string[],
     smartContracts: string[]
-): Promise<{ eoaLeaves: Leaf[]; smartContractLeaves: Leaf[] }> => {
+): {
+    eoas: { [address: string]: BigNumber };
+    smartContracts: { [address: string]: BigNumber };
+} => {
     const amountPerUser = overallAmount.div(
         eoas.length + smartContracts.length
     );
     return {
-        eoaLeaves: eoas.map((account) => ({
-            account: getAddress(account),
-            amount: amountPerUser.toString(),
-        })),
-        smartContractLeaves: smartContracts.map((account) => ({
-            account: getAddress(account),
-            amount: amountPerUser.toString(),
-        })),
+        eoas: eoas.reduce(
+            (accumulator: { [address: string]: BigNumber }, account) => {
+                accumulator[getAddress(account)] = amountPerUser;
+                return accumulator;
+            },
+            {}
+        ),
+        smartContracts: smartContracts.reduce(
+            (accumulator: { [address: string]: BigNumber }, account) => {
+                accumulator[getAddress(account)] = amountPerUser;
+                return accumulator;
+            },
+            {}
+        ),
     };
+};
+
+const buildLeaves = (amountMap: { [address: string]: BigNumber }): Leaf[] => {
+    return Object.entries(amountMap).map(([account, amount]) => ({
+        account: getAddress(account),
+        amount: amount.toString(),
+    }));
 };
 
 const createWhitelist = async () => {
@@ -47,25 +64,15 @@ const createWhitelist = async () => {
     const { eoas: oneInchEoas, smartContracts: oneInchSmartContracts } =
         await getWhitelist1InchVoters();
     const {
-        eoaLeaves: oneInchEoaLeaves,
-        smartContractLeaves: oneInchSmartContractLeaves,
-    } = await getMerkleTreeLeaves(
-        parseEther("873000"),
-        oneInchEoas,
-        oneInchSmartContracts
-    );
+        eoas: oneInchEoaAmounts,
+        smartContracts: oneInchSmartContractAmounts,
+    } = getAmountsMap(parseEther("873000"), oneInchEoas, oneInchSmartContracts);
 
     // Accounts that hold more than a certain amount of xSDT
     const { eoas: xSdtEoas, smartContracts: xSdtSmartContracts } =
         await getWhitelistXSdtHolders();
-    const {
-        eoaLeaves: xSdtEoaLeaves,
-        smartContractLeaves: xSdtSmartContractLeaves,
-    } = await getMerkleTreeLeaves(
-        parseEther("214000"),
-        xSdtEoas,
-        xSdtSmartContracts
-    );
+    const { eoas: xSdtEoaAmounts, smartContracts: xSdtSmartContractAmounts } =
+        getAmountsMap(parseEther("214000"), xSdtEoas, xSdtSmartContracts);
 
     // Accounts that hold DXdao-issued POAPs
     const {
@@ -75,26 +82,16 @@ const createWhitelist = async () => {
     } = await getWhitelistPoapHolders();
     if (poapXDaiSmartContracts.length > 0)
         throw new Error("xdai smart contracts detected");
-    const {
-        eoaLeaves: poapEoaLeaves,
-        smartContractLeaves: poapSmartContractLeaves,
-    } = await getMerkleTreeLeaves(
-        parseEther("74000"),
-        poapEoas,
-        poapMainnetSmartContracts
-    );
+    const { eoas: poapEoaAmounts, smartContracts: poapSmartContractAmounts } =
+        getAmountsMap(parseEther("74000"), poapEoas, poapMainnetSmartContracts);
 
     // Accounts that traded more than a certain amount on dex.guru
     const { eoas: dexGuruEoas, smartContracts: dexGuruSmartContracts } =
         await getWhitelistDexGuruTraders();
     const {
-        eoaLeaves: dexGuruEoaLeaves,
-        smartContractLeaves: dexGuruSmartContractLeaves,
-    } = await getMerkleTreeLeaves(
-        parseEther("121900"),
-        dexGuruEoas,
-        dexGuruSmartContracts
-    );
+        eoas: dexGuruEoaAmounts,
+        smartContracts: dexGuruSmartContractAmounts,
+    } = getAmountsMap(parseEther("121900"), dexGuruEoas, dexGuruSmartContracts);
 
     // Accounts that traded more than a certain amount on dex.guru
     const {
@@ -104,14 +101,12 @@ const createWhitelist = async () => {
     } = await getWhitelistOmenUsers();
     if (omenXDaiSmartContracts.length > 0)
         throw new Error("xdai smart contracts detected");
-    const {
-        eoaLeaves: omenEoaLeaves,
-        smartContractLeaves: omenSmartContractLeaves,
-    } = await getMerkleTreeLeaves(
-        parseEther("515600"),
-        omenEoas,
-        omenMainnetSmartContracts
-    );
+    const { eoas: omenEoaAmounts, smartContracts: omenSmartContractAmounts } =
+        getAmountsMap(
+            parseEther("515600"),
+            omenEoas,
+            omenMainnetSmartContracts
+        );
 
     // Accounts that voted yes to Uniswap on Arbitrum
     const {
@@ -119,9 +114,9 @@ const createWhitelist = async () => {
         smartContracts: uniswapOnArbitrumSmartContracts,
     } = await getWhitelistUniswapOnArbitrumYes();
     const {
-        eoaLeaves: uniswapOnArbitrumEoaLeaves,
-        smartContractLeaves: uniswapOnArbitrumSmartContractLeaves,
-    } = await getMerkleTreeLeaves(
+        eoas: uniswapOnArbitrumEoaAmounts,
+        smartContracts: uniswapOnArbitrumSmartContractAmounts,
+    } = await getAmountsMap(
         parseEther("359500"),
         uniswapOnArbitrumEoas,
         uniswapOnArbitrumSmartContracts
@@ -133,9 +128,9 @@ const createWhitelist = async () => {
         smartContracts: banklessVoterSmartContracts,
     } = await getWhitelistMoreThanOneBanklessDaoVote();
     const {
-        eoaLeaves: banklessVoterEoaLeaves,
-        smartContractLeaves: banklessVoterSmartContractLeaves,
-    } = await getMerkleTreeLeaves(
+        eoas: banklessVoterEoaAmounts,
+        smartContracts: banklessVoterSmartContractAmounts,
+    } = getAmountsMap(
         parseEther("376000"),
         banklessVoterEoas,
         banklessVoterSmartContracts
@@ -150,9 +145,9 @@ const createWhitelist = async () => {
     if (swaprSwapperXDaiSmartContracts.length > 0)
         throw new Error("xdai smart contracts detected");
     const {
-        eoaLeaves: swaprSwapperEoaLeaves,
-        smartContractLeaves: swaprSwapperSmartContractLeaves,
-    } = await getMerkleTreeLeaves(
+        eoas: swaprSwapperEoaAmounts,
+        smartContracts: swaprSwapperSmartContractAmounts,
+    } = getAmountsMap(
         parseEther("376000"),
         swaprSwapperEoas,
         swaprSwapperMainnetSmartContracts
@@ -167,25 +162,25 @@ const createWhitelist = async () => {
     if (swaprLpXDaiSmartContracts.length > 0)
         throw new Error("xdai smart contracts detected");
     const {
-        eoaLeaves: swaprLpEoaLeaves,
-        smartContractLeaves: swaprLpSmartContractLeaves,
-    } = await getMerkleTreeLeaves(
+        eoas: swaprLpEoaAmounts,
+        smartContracts: swaprLpSmartContractAmounts,
+    } = getAmountsMap(
         parseEther("90000"),
         swaprLpEoas,
         swaprLpMainnetSmartContracts
     );
 
-    const marketingAirdropEoaLeaves = [
-        ...oneInchEoaLeaves,
-        ...xSdtEoaLeaves,
-        ...poapEoaLeaves,
-        ...dexGuruEoaLeaves,
-        ...omenEoaLeaves,
-        ...uniswapOnArbitrumEoaLeaves,
-        ...banklessVoterEoaLeaves,
-        ...swaprSwapperEoaLeaves,
-        ...swaprLpEoaLeaves,
-    ];
+    const eoaMarketingAmountsMap = {};
+    mergeBalanceMaps(eoaMarketingAmountsMap, oneInchEoaAmounts);
+    mergeBalanceMaps(eoaMarketingAmountsMap, xSdtEoaAmounts);
+    mergeBalanceMaps(eoaMarketingAmountsMap, poapEoaAmounts);
+    mergeBalanceMaps(eoaMarketingAmountsMap, dexGuruEoaAmounts);
+    mergeBalanceMaps(eoaMarketingAmountsMap, omenEoaAmounts);
+    mergeBalanceMaps(eoaMarketingAmountsMap, uniswapOnArbitrumEoaAmounts);
+    mergeBalanceMaps(eoaMarketingAmountsMap, banklessVoterEoaAmounts);
+    mergeBalanceMaps(eoaMarketingAmountsMap, swaprSwapperEoaAmounts);
+    mergeBalanceMaps(eoaMarketingAmountsMap, swaprLpEoaAmounts);
+    const marketingAirdropEoaLeaves = buildLeaves(eoaMarketingAmountsMap);
     exportJsonLeaves(
         marketingAirdropEoaLeaves,
         MARKETING_AIRDROP_EOA_JSON_LOCATION
@@ -193,17 +188,46 @@ const createWhitelist = async () => {
     const marketingAirdropEoaTree = new MerkleTree(marketingAirdropEoaLeaves);
     console.log("marketing airdrop eoa root", marketingAirdropEoaTree.root);
 
-    const marketingAirdropSmartContractLeaves = [
-        ...oneInchSmartContractLeaves,
-        ...xSdtSmartContractLeaves,
-        ...poapSmartContractLeaves,
-        ...dexGuruSmartContractLeaves,
-        ...omenSmartContractLeaves,
-        ...uniswapOnArbitrumSmartContractLeaves,
-        ...banklessVoterSmartContractLeaves,
-        ...swaprSwapperSmartContractLeaves,
-        ...swaprLpSmartContractLeaves,
-    ];
+    const smartContractMarketingAmountsMap = {};
+    mergeBalanceMaps(
+        smartContractMarketingAmountsMap,
+        oneInchSmartContractAmounts
+    );
+    mergeBalanceMaps(
+        smartContractMarketingAmountsMap,
+        xSdtSmartContractAmounts
+    );
+    mergeBalanceMaps(
+        smartContractMarketingAmountsMap,
+        poapSmartContractAmounts
+    );
+    mergeBalanceMaps(
+        smartContractMarketingAmountsMap,
+        dexGuruSmartContractAmounts
+    );
+    mergeBalanceMaps(
+        smartContractMarketingAmountsMap,
+        omenSmartContractAmounts
+    );
+    mergeBalanceMaps(
+        smartContractMarketingAmountsMap,
+        uniswapOnArbitrumSmartContractAmounts
+    );
+    mergeBalanceMaps(
+        smartContractMarketingAmountsMap,
+        banklessVoterSmartContractAmounts
+    );
+    mergeBalanceMaps(
+        smartContractMarketingAmountsMap,
+        swaprSwapperSmartContractAmounts
+    );
+    mergeBalanceMaps(
+        smartContractMarketingAmountsMap,
+        swaprLpSmartContractAmounts
+    );
+    const marketingAirdropSmartContractLeaves = buildLeaves(
+        smartContractMarketingAmountsMap
+    );
     exportJsonLeaves(
         marketingAirdropSmartContractLeaves,
         MARKETING_AIRDROP_SC_JSON_LOCATION
@@ -223,14 +247,10 @@ const createWhitelist = async () => {
     } = await getWhitelistDxdHolders();
     if (dxdXDaiSmartContracts.length > 0)
         throw new Error("xdai smart contracts detected");
-    const {
-        eoaLeaves: dxdEoaLeaves,
-        smartContractLeaves: dxdSmartContractLeaves,
-    } = await getMerkleTreeLeaves(
-        parseEther("8000000"),
-        dxdEoas,
-        dxdMainnetSmartContracts
-    );
+    const { eoas: dxdEoaAmounts, smartContracts: dxdSmartContractAmounts } =
+        getAmountsMap(parseEther("8000000"), dxdEoas, dxdMainnetSmartContracts);
+    const dxdEoaLeaves = buildLeaves(dxdEoaAmounts);
+    const dxdSmartContractLeaves = buildLeaves(dxdSmartContractAmounts);
     exportJsonLeaves(dxdEoaLeaves, DXD_AIRDROP_EOA_JSON_LOCATION);
     exportJsonLeaves(dxdSmartContractLeaves, DXD_AIRDROP_SC_JSON_LOCATION);
     const dxdAirdropEoaTree = new MerkleTree(dxdEoaLeaves);
