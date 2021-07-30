@@ -17,7 +17,7 @@ import {
     mergeBalanceMaps,
 } from "../commons";
 import { getHoneyswapDxdLiquidityProviders } from "./honeyswap-lps";
-import { getUniswapV2DxdLiquidityProviders } from "./uniswap-v2-lps";
+import { getUniswapV2DxdLiquidityProviders } from "./uniswap-v2";
 import vestingFactoryAbi from "./abis/vesting-factory.json";
 import erc20Abi from "../abis/erc20.json";
 import { getAddress, parseEther } from "ethers/lib/utils";
@@ -25,6 +25,7 @@ import { getBalancerDxdLiquidityProviders } from "./balancer-lps";
 import { getMesaDxdHolders } from "./mesa";
 import { getSwaprDxdLiquidityProviders } from "./swapr";
 import { getLoopringDxdHolders } from "./loopring";
+import { getUniswapV3DxdLiquidityProviders } from "./uniswap-v3";
 
 const EOA_CACHE_LOCATION = `${__dirname}/cache/eoas.json`;
 const MAINNET_SC_CACHE_LOCATION = `${__dirname}/cache/mainnet-scs.json`;
@@ -181,26 +182,29 @@ const getMainnetDxdVestingContractAddresses = async () => {
     return addresses;
 };
 
-export const getWhitelistDxdHolders = async (): Promise<{
-    eoas: string[];
-    mainnetSmartContracts: string[];
-    xDaiSmartContracts: string[];
+export const getWhitelistedDxdHoldersBalanceMap = async (): Promise<{
+    eoas: { [address: string]: BigNumber };
+    mainnetSmartContracts: { [address: string]: BigNumber };
+    xDaiSmartContracts: { [address: string]: BigNumber };
 }> => {
-    let eoas = loadCache(EOA_CACHE_LOCATION);
-    let mainnetSmartContracts = loadCache(MAINNET_SC_CACHE_LOCATION);
-    let xDaiSmartContracts = loadCache(XDAI_SC_CACHE_LOCATION);
+    let eoas = loadBalanceMapCache(EOA_CACHE_LOCATION);
+    let mainnetSmartContracts = loadBalanceMapCache(MAINNET_SC_CACHE_LOCATION);
+    let xDaiSmartContracts = loadBalanceMapCache(XDAI_SC_CACHE_LOCATION);
     // load data from cache if available
     if (
-        eoas.length > 0 ||
-        mainnetSmartContracts.length > 0 ||
-        xDaiSmartContracts.length > 0
+        Object.keys(eoas).length > 0 ||
+        Object.keys(mainnetSmartContracts).length > 0 ||
+        Object.keys(xDaiSmartContracts).length > 0
     ) {
         console.log(
-            `dxd holders: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnet scs, ${xDaiSmartContracts.length} xdai scs`
+            `dxd holders: ${Object.keys(eoas).length} eoas, ${
+                Object.keys(mainnetSmartContracts).length
+            } mainnet scs, ${Object.keys(xDaiSmartContracts).length} xdai scs`
         );
         return { eoas, mainnetSmartContracts, xDaiSmartContracts };
     }
 
+    const uniswapV3LpBalances = await getUniswapV3DxdLiquidityProviders();
     const {
         xDaiHolders: xDaiSwaprBalances,
         mainnetHolders: mainnetSwaprBalances,
@@ -279,6 +283,7 @@ export const getWhitelistDxdHolders = async (): Promise<{
     mergeBalanceMaps(allMainnetHolders, mainnetSwaprBalances);
     mergeBalanceMaps(allMainnetHolders, loopringBalances);
     mergeBalanceMaps(allMainnetHolders, uniswapV2LpBalances);
+    mergeBalanceMaps(allMainnetHolders, uniswapV3LpBalances);
     mergeBalanceMaps(allMainnetHolders, balancerLpBalances);
 
     // get deduplicated addresses that are not on the blacklist
@@ -295,13 +300,18 @@ export const getWhitelistDxdHolders = async (): Promise<{
     const crossChainBalanceMap = allMainnetHolders;
     mergeBalanceMaps(crossChainBalanceMap, allXDaiHolders);
     // filter out accounts that hold less than the minimum threshold and/or are blacklisted
-    const eligibleAddresses = Object.entries(crossChainBalanceMap)
-        .filter(
-            ([address, balance]) =>
+    const eligibleAddressesMap = Object.entries(crossChainBalanceMap).reduce(
+        (accumulator: { [address: string]: BigNumber }, [address, balance]) => {
+            if (
                 blacklist.indexOf(getAddress(address)) < 0 &&
                 balance.gt(MINIMUM_HOLDINGS)
-        )
-        .map(([address]) => getAddress(address));
+            )
+                accumulator[getAddress(address)] = balance;
+            return accumulator;
+        },
+        {}
+    );
+    const eligibleAddresses = Object.keys(eligibleAddressesMap);
 
     // cross-reference data from eligible addresses and eoas across chains to
     // determine which eoas are eligible for the airdrop
@@ -309,7 +319,12 @@ export const getWhitelistDxdHolders = async (): Promise<{
         [...rawMainnetEoas, ...rawXDaiEoas].filter(
             (address) => eligibleAddresses.indexOf(getAddress(address)) >= 0
         )
-    );
+    ).reduce((accumulator: { [address: string]: BigNumber }, address) => {
+        const checksummedAddress = getAddress(address);
+        accumulator[checksummedAddress] =
+            eligibleAddressesMap[checksummedAddress];
+        return accumulator;
+    }, {});
 
     // cross-reference data from eligible addresses and mainnet scs to
     // determine which mainnet scs are eligible for the airdrop
@@ -317,7 +332,12 @@ export const getWhitelistDxdHolders = async (): Promise<{
         rawMainnetSmartContracts.filter(
             (address) => eligibleAddresses.indexOf(getAddress(address)) >= 0
         )
-    );
+    ).reduce((accumulator: { [address: string]: BigNumber }, address) => {
+        const checksummedAddress = getAddress(address);
+        accumulator[checksummedAddress] =
+            eligibleAddressesMap[checksummedAddress];
+        return accumulator;
+    }, {});
 
     // cross-reference data from eligible addresses and xdai scs to
     // determine which xdai scs are eligible for the airdrop
@@ -325,15 +345,22 @@ export const getWhitelistDxdHolders = async (): Promise<{
         rawXDaiSmartContracts.filter(
             (address) => eligibleAddresses.indexOf(getAddress(address)) >= 0
         )
-    );
+    ).reduce((accumulator: { [address: string]: BigNumber }, address) => {
+        const checksummedAddress = getAddress(address);
+        accumulator[checksummedAddress] =
+            eligibleAddressesMap[checksummedAddress];
+        return accumulator;
+    }, {});
 
     console.log(
-        `dxd holders: ${eoas.length} eoas, ${mainnetSmartContracts.length} mainnet scs, ${xDaiSmartContracts.length} xdai scs`
+        `dxd holders: ${Object.keys(eoas).length} eoas, ${
+            Object.keys(mainnetSmartContracts).length
+        } mainnet scs, ${Object.keys(xDaiSmartContracts).length} xdai scs`
     );
 
-    saveCache(eoas, EOA_CACHE_LOCATION);
-    saveCache(mainnetSmartContracts, MAINNET_SC_CACHE_LOCATION);
-    saveCache(xDaiSmartContracts, XDAI_SC_CACHE_LOCATION);
+    saveBalanceMapCache(eoas, EOA_CACHE_LOCATION);
+    saveBalanceMapCache(mainnetSmartContracts, MAINNET_SC_CACHE_LOCATION);
+    saveBalanceMapCache(xDaiSmartContracts, XDAI_SC_CACHE_LOCATION);
 
     return { eoas, mainnetSmartContracts, xDaiSmartContracts };
 };

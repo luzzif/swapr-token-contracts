@@ -6,8 +6,12 @@ import { Client } from "jayson";
 import url from "url";
 import { getAddress } from "ethers/lib/utils";
 
-export const UNISWAP_MAINNET_SUBGRAPH_CLIENT = new GraphQLClient(
+export const UNISWAP_V2_MAINNET_SUBGRAPH_CLIENT = new GraphQLClient(
     "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2"
+);
+
+export const UNISWAP_V3_MAINNET_SUBGRAPH_CLIENT = new GraphQLClient(
+    "https://api.thegraph.com/subgraphs/name/benesjan/uniswap-v3-subgraph"
 );
 
 export const HONEYSWAP_XDAI_SUBGRAPH_CLIENT = new GraphQLClient(

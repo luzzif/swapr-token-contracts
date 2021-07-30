@@ -4,7 +4,7 @@ import { getWhitelistUniswapOnArbitrumYes } from "./uniswap-on-arbitrum-yes-vote
 import { getWhitelistMoreThanOneBanklessDaoVote } from "./two-bankless-dao-votes";
 import { getWhitelistOmenUsers } from "./omen-users";
 import { getWhitelistDexGuruTraders } from "./dex-guru-traders";
-import { getWhitelistDxdHolders } from "./dxd-holders";
+import { getWhitelistedDxdHoldersBalanceMap } from "./dxd-holders";
 import { getWhitelistPoapHolders } from "./poap-holders";
 import { getWhitelistXSdtHolders } from "./xsdt-holders";
 import { getWhitelist1InchVoters } from "./1inch-governance-voters";
@@ -49,6 +49,30 @@ const getAmountsMap = (
             },
             {}
         ),
+    };
+};
+
+const getBalanceWeightedAmountsMap = (
+    overallAmount: BigNumber,
+    totalBalance: BigNumber,
+    eoas: { [address: string]: BigNumber },
+    smartContracts: { [address: string]: BigNumber }
+): {
+    eoas: { [address: string]: BigNumber };
+    smartContracts: { [address: string]: BigNumber };
+} => {
+    const reducer = (
+        accumulator: { [address: string]: BigNumber },
+        [account, balance]
+    ) => {
+        accumulator[getAddress(account)] = overallAmount
+            .mul(balance)
+            .div(totalBalance);
+        return accumulator;
+    };
+    return {
+        eoas: Object.entries(eoas).reduce(reducer, {}),
+        smartContracts: Object.entries(smartContracts).reduce(reducer, {}),
     };
 };
 
@@ -260,11 +284,24 @@ const createWhitelist = async () => {
         eoas: dxdEoas,
         mainnetSmartContracts: dxdMainnetSmartContracts,
         xDaiSmartContracts: dxdXDaiSmartContracts,
-    } = await getWhitelistDxdHolders();
-    if (dxdXDaiSmartContracts.length > 0)
+    } = await getWhitelistedDxdHoldersBalanceMap();
+    if (Object.keys(dxdXDaiSmartContracts).length > 0)
         throw new Error("xdai smart contracts detected");
+    // calculating per-user amount based on balance-weighted algorithm
+    const totalDxdAmount = [
+        ...Object.values(dxdEoas),
+        ...Object.values(dxdMainnetSmartContracts),
+    ].reduce(
+        (total: BigNumber, balance) => total.add(balance),
+        BigNumber.from(0)
+    );
     const { eoas: dxdEoaAmounts, smartContracts: dxdSmartContractAmounts } =
-        getAmountsMap(parseEther("8000000"), dxdEoas, dxdMainnetSmartContracts);
+        getBalanceWeightedAmountsMap(
+            parseEther("8000000"),
+            totalDxdAmount,
+            dxdEoas,
+            dxdMainnetSmartContracts
+        );
     const dxdEoaLeaves = buildLeaves(dxdEoaAmounts);
     const dxdSmartContractLeaves = buildLeaves(dxdSmartContractAmounts);
     exportJsonLeaves(dxdEoaLeaves, DXD_AIRDROP_EOA_JSON_LOCATION);

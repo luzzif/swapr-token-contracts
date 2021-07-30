@@ -4,10 +4,10 @@ import {
     DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK,
     DXD_MAINNET_ADDRESS,
     getAllDataFromSubgraph,
-    UNISWAP_MAINNET_SUBGRAPH_CLIENT,
+    UNISWAP_V2_MAINNET_SUBGRAPH_CLIENT,
 } from "../commons";
 import { Decimal } from "decimal.js-light";
-import { parseEther } from "ethers/lib/utils";
+import { getAddress, parseEther } from "ethers/lib/utils";
 
 const PAIRS_TOKEN0_QUERY = gql`
     query getPairsDxdToken0($lastId: ID) {
@@ -77,21 +77,21 @@ const getSubgraphData = async (): Promise<{
     positionsByToken1: LiquidityPosition[];
 }> => {
     const dxdPairsByToken0 = await getAllDataFromSubgraph<Pair>(
-        UNISWAP_MAINNET_SUBGRAPH_CLIENT,
+        UNISWAP_V2_MAINNET_SUBGRAPH_CLIENT,
         PAIRS_TOKEN0_QUERY
     );
     const positionsByToken0 = await getAllDataFromSubgraph<LiquidityPosition>(
-        UNISWAP_MAINNET_SUBGRAPH_CLIENT,
+        UNISWAP_V2_MAINNET_SUBGRAPH_CLIENT,
         LIQUIDITY_POSITIONS_QUERY,
         { pairIds: dxdPairsByToken0.map((pair) => pair.id) }
     );
 
     const dxdPairsByToken1 = await getAllDataFromSubgraph<Pair>(
-        UNISWAP_MAINNET_SUBGRAPH_CLIENT,
+        UNISWAP_V2_MAINNET_SUBGRAPH_CLIENT,
         PAIRS_TOKEN1_QUERY
     );
     const positionsByToken1 = await getAllDataFromSubgraph<LiquidityPosition>(
-        UNISWAP_MAINNET_SUBGRAPH_CLIENT,
+        UNISWAP_V2_MAINNET_SUBGRAPH_CLIENT,
         LIQUIDITY_POSITIONS_QUERY,
         { pairIds: dxdPairsByToken1.map((pair) => pair.id) }
     );
@@ -107,7 +107,7 @@ export const getUniswapV2DxdLiquidityProviders = async (): Promise<{
     const { positionsByToken0, positionsByToken1 } = await getSubgraphData();
 
     positionsByToken0.forEach((position) => {
-        const userAddress = position.user.address;
+        const userAddress = getAddress(position.user.address);
         const userLpTokenBalance = new Decimal(position.liquidityTokenBalance);
         const pairTotalSupply = new Decimal(position.pair.totalSupply);
         const userPoolPercentage =
@@ -121,7 +121,7 @@ export const getUniswapV2DxdLiquidityProviders = async (): Promise<{
     });
 
     positionsByToken1.forEach((position) => {
-        const userAddress = position.user.address;
+        const userAddress = getAddress(position.user.address);
         const userLpTokenBalance = new Decimal(position.liquidityTokenBalance);
         const pairTotalSupply = new Decimal(position.pair.totalSupply);
         const userPoolPercentage =
