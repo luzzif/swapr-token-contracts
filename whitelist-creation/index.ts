@@ -16,8 +16,7 @@ import { mergeBalanceMaps } from "./commons";
 
 const MARKETING_AIRDROP_EOA_JSON_LOCATION = `${__dirname}/cache/marketing-airdrop-eoa-leaves.json`;
 const MARKETING_AIRDROP_SC_JSON_LOCATION = `${__dirname}/cache/marketing-airdrop-sc-leaves.json`;
-const DXD_AIRDROP_EOA_JSON_LOCATION = `${__dirname}/cache/dxd-airdrop-eoa-leaves.json`;
-const DXD_AIRDROP_SC_JSON_LOCATION = `${__dirname}/cache/dxd-airdrop-sc-leaves.json`;
+const DXD_AIRDROP_JSON_LOCATION = `${__dirname}/cache/dxd-airdrop-leaves.json`;
 
 export const exportJsonLeaves = (leaves: Leaf[], location: string) => {
     outputJSONSync(location, leaves, { spaces: 4 });
@@ -55,25 +54,20 @@ const getAmountsMap = (
 const getBalanceWeightedAmountsMap = (
     overallAmount: BigNumber,
     totalBalance: BigNumber,
-    eoas: { [address: string]: BigNumber },
-    smartContracts: { [address: string]: BigNumber }
-): {
-    eoas: { [address: string]: BigNumber };
-    smartContracts: { [address: string]: BigNumber };
-} => {
-    const reducer = (
-        accumulator: { [address: string]: BigNumber },
-        [account, balance]
-    ) => {
-        accumulator[getAddress(account)] = overallAmount
-            .mul(balance)
-            .div(totalBalance);
-        return accumulator;
-    };
-    return {
-        eoas: Object.entries(eoas).reduce(reducer, {}),
-        smartContracts: Object.entries(smartContracts).reduce(reducer, {}),
-    };
+    accounts: { [address: string]: BigNumber }
+): { [address: string]: BigNumber } => {
+    return Object.entries(accounts).reduce(
+        (
+            accumulator: { [address: string]: BigNumber },
+            [account, balance]: [string, BigNumber]
+        ) => {
+            accumulator[getAddress(account)] = overallAmount
+                .mul(balance)
+                .div(totalBalance);
+            return accumulator;
+        },
+        {}
+    );
 };
 
 const getTotalAmountFromMap = (map: {
@@ -288,33 +282,26 @@ const createWhitelist = async () => {
     if (Object.keys(dxdXDaiSmartContracts).length > 0)
         throw new Error("xdai smart contracts detected");
     // calculating per-user amount based on balance-weighted algorithm
-    const totalDxdAmount = [
-        ...Object.values(dxdEoas),
-        ...Object.values(dxdMainnetSmartContracts),
-    ].reduce(
+    const overallMap = {
+        ...dxdEoas,
+        ...dxdMainnetSmartContracts,
+    };
+    const totalDxdAmount = [...Object.values(overallMap)].reduce(
         (total: BigNumber, balance) => total.add(balance),
         BigNumber.from(0)
     );
-    const { eoas: dxdEoaAmounts, smartContracts: dxdSmartContractAmounts } =
-        getBalanceWeightedAmountsMap(
-            parseEther("8000000"),
-            totalDxdAmount,
-            dxdEoas,
-            dxdMainnetSmartContracts
-        );
-    const dxdEoaLeaves = buildLeaves(dxdEoaAmounts);
-    const dxdSmartContractLeaves = buildLeaves(dxdSmartContractAmounts);
-    exportJsonLeaves(dxdEoaLeaves, DXD_AIRDROP_EOA_JSON_LOCATION);
-    exportJsonLeaves(dxdSmartContractLeaves, DXD_AIRDROP_SC_JSON_LOCATION);
-    const dxdAirdropEoaTree = new MerkleTree(dxdEoaLeaves);
-    console.log("dxd airdrop eoa root", dxdAirdropEoaTree.root);
-    const dxdAirdropSmartContractTree = new MerkleTree(dxdSmartContractLeaves);
-    console.log("dxd airdrop sc root", dxdAirdropSmartContractTree.root);
+    const dxdAmounts = getBalanceWeightedAmountsMap(
+        parseEther("8000000"),
+        totalDxdAmount,
+        overallMap
+    );
+    const dxdLeaves = buildLeaves(dxdAmounts);
+    exportJsonLeaves(dxdLeaves, DXD_AIRDROP_JSON_LOCATION);
+    const dxdAirdropTree = new MerkleTree(dxdLeaves);
+    console.log("dxd airdrop root", dxdAirdropTree.root);
     console.log(
         `dxd airdrop required funding: ${formatEther(
-            getTotalAmountFromMap(dxdEoaAmounts).add(
-                getTotalAmountFromMap(dxdSmartContractAmounts)
-            )
+            getTotalAmountFromMap(dxdAmounts)
         )}`
     );
 };
