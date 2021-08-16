@@ -30,6 +30,11 @@ const hardhatConfig: HardhatUserConfig = {
             accounts,
             gasPrice: 0,
         },
+        arbitrumOne: {
+            url: "https://arb1.arbitrum.io/rpc",
+            accounts,
+            gasPrice: 0,
+        },
         xdai: {
             url: "https://xdai.poanetwork.dev",
             accounts,
