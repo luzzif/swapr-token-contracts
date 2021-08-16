@@ -14,9 +14,9 @@ import { formatEther, getAddress, parseEther } from "ethers/lib/utils";
 import { outputJSONSync } from "fs-extra";
 import { mergeBalanceMaps } from "./commons";
 
-const MARKETING_AIRDROP_EOA_JSON_LOCATION = `${__dirname}/cache/marketing-airdrop-eoa-leaves.json`;
+const MARKETING_AND_UNLOCKED_DXD_HOLDERS_AIRDROP_EOA_JSON_LOCATION = `${__dirname}/cache/marketing-and-unlocked-dxd-holders-airdrop-eoa-leaves.json`;
 const MARKETING_AIRDROP_SC_JSON_LOCATION = `${__dirname}/cache/marketing-airdrop-sc-leaves.json`;
-const DXD_AIRDROP_JSON_LOCATION = `${__dirname}/cache/dxd-airdrop-leaves.json`;
+const VESTED_DXD_AIRDROP_JSON_LOCATION = `${__dirname}/cache/vested-dxd-airdrop-leaves.json`;
 
 export const exportJsonLeaves = (leaves: Leaf[], location: string) => {
     outputJSONSync(location, leaves, { spaces: 4 });
@@ -51,23 +51,30 @@ const getAmountsMap = (
     };
 };
 
-const getBalanceWeightedAmountsMap = (
+const getBalanceWeightedHalfAmountsMap = (
     overallAmount: BigNumber,
     totalBalance: BigNumber,
-    accounts: { [address: string]: BigNumber }
-): { [address: string]: BigNumber } => {
-    return Object.entries(accounts).reduce(
-        (
-            accumulator: { [address: string]: BigNumber },
-            [account, balance]: [string, BigNumber]
-        ) => {
-            accumulator[getAddress(account)] = overallAmount
-                .mul(balance)
-                .div(totalBalance);
-            return accumulator;
-        },
-        {}
-    );
+    eoas: { [address: string]: BigNumber },
+    smartContracts: { [address: string]: BigNumber }
+): {
+    eoas: { [address: string]: BigNumber };
+    smartContracts: { [address: string]: BigNumber };
+} => {
+    const reducer = (
+        accumulator: { [address: string]: BigNumber },
+        [account, balance]: [string, BigNumber]
+    ) => {
+        accumulator[getAddress(account)] = overallAmount
+            .mul(balance)
+            .div(totalBalance)
+            .div(2);
+        return accumulator;
+    };
+
+    return {
+        eoas: Object.entries(eoas).reduce(reducer, {}),
+        smartContracts: Object.entries(smartContracts).reduce(reducer, {}),
+    };
 };
 
 const getTotalAmountFromMap = (map: {
@@ -197,23 +204,39 @@ const createWhitelist = async () => {
         swaprLpMainnetSmartContracts
     );
 
-    const eoaMarketingAmountsMap = {};
-    mergeBalanceMaps(eoaMarketingAmountsMap, oneInchEoaAmounts);
-    mergeBalanceMaps(eoaMarketingAmountsMap, xSdtEoaAmounts);
-    mergeBalanceMaps(eoaMarketingAmountsMap, poapEoaAmounts);
-    mergeBalanceMaps(eoaMarketingAmountsMap, dexGuruEoaAmounts);
-    mergeBalanceMaps(eoaMarketingAmountsMap, omenEoaAmounts);
-    mergeBalanceMaps(eoaMarketingAmountsMap, uniswapOnArbitrumEoaAmounts);
-    mergeBalanceMaps(eoaMarketingAmountsMap, banklessVoterEoaAmounts);
-    mergeBalanceMaps(eoaMarketingAmountsMap, swaprSwapperEoaAmounts);
-    mergeBalanceMaps(eoaMarketingAmountsMap, swaprLpEoaAmounts);
-    const marketingAirdropEoaLeaves = buildLeaves(eoaMarketingAmountsMap);
-    exportJsonLeaves(
-        marketingAirdropEoaLeaves,
-        MARKETING_AIRDROP_EOA_JSON_LOCATION
+    const {
+        eoas: dxdEoas,
+        mainnetSmartContracts: dxdMainnetSmartContracts,
+        xDaiSmartContracts: dxdXDaiSmartContracts,
+    } = await getWhitelistedDxdHoldersBalanceMap();
+    if (Object.keys(dxdXDaiSmartContracts).length > 0)
+        throw new Error("xdai smart contracts detected");
+    // calculating per-user amount based on balance-weighted algorithm
+    const totalDxdAmount = [
+        ...Object.values({
+            ...dxdEoas,
+            ...dxdMainnetSmartContracts,
+        }),
+    ].reduce(
+        (total: BigNumber, balance) => total.add(balance),
+        BigNumber.from(0)
     );
-    const marketingAirdropEoaTree = new MerkleTree(marketingAirdropEoaLeaves);
-    console.log("marketing airdrop eoa root", marketingAirdropEoaTree.root);
+    // this map only represents half of the SWPR amount each DXD holder must get.
+    // This is because half will be given out immediately, alongside the marketing airdrop,
+    // while the other half will be vested for 2 years on mainnet.
+    const { eoas: halfDxdAmountEoas, smartContracts: halfDxdAmountScs } =
+        getBalanceWeightedHalfAmountsMap(
+            parseEther("8000000"),
+            totalDxdAmount,
+            dxdEoas,
+            dxdMainnetSmartContracts
+        );
+    const vestedMainnetDxdLeaves = buildLeaves({
+        ...halfDxdAmountEoas,
+        ...halfDxdAmountScs,
+    });
+    exportJsonLeaves(vestedMainnetDxdLeaves, VESTED_DXD_AIRDROP_JSON_LOCATION);
+    const vestedDxdAirdropTree = new MerkleTree(vestedMainnetDxdLeaves);
 
     const smartContractMarketingAmountsMap = {};
     mergeBalanceMaps(
@@ -252,6 +275,7 @@ const createWhitelist = async () => {
         smartContractMarketingAmountsMap,
         swaprLpSmartContractAmounts
     );
+    mergeBalanceMaps(smartContractMarketingAmountsMap, halfDxdAmountScs);
     const marketingAirdropSmartContractLeaves = buildLeaves(
         smartContractMarketingAmountsMap
     );
@@ -262,46 +286,82 @@ const createWhitelist = async () => {
     const marketingAirdropSmartContractTree = new MerkleTree(
         marketingAirdropSmartContractLeaves
     );
+
+    const eoaMarketingAndUnlockedDxdHoldersAmountsMap = {};
+    mergeBalanceMaps(
+        eoaMarketingAndUnlockedDxdHoldersAmountsMap,
+        oneInchEoaAmounts
+    );
+    mergeBalanceMaps(
+        eoaMarketingAndUnlockedDxdHoldersAmountsMap,
+        xSdtEoaAmounts
+    );
+    mergeBalanceMaps(
+        eoaMarketingAndUnlockedDxdHoldersAmountsMap,
+        poapEoaAmounts
+    );
+    mergeBalanceMaps(
+        eoaMarketingAndUnlockedDxdHoldersAmountsMap,
+        dexGuruEoaAmounts
+    );
+    mergeBalanceMaps(
+        eoaMarketingAndUnlockedDxdHoldersAmountsMap,
+        omenEoaAmounts
+    );
+    mergeBalanceMaps(
+        eoaMarketingAndUnlockedDxdHoldersAmountsMap,
+        uniswapOnArbitrumEoaAmounts
+    );
+    mergeBalanceMaps(
+        eoaMarketingAndUnlockedDxdHoldersAmountsMap,
+        banklessVoterEoaAmounts
+    );
+    mergeBalanceMaps(
+        eoaMarketingAndUnlockedDxdHoldersAmountsMap,
+        swaprSwapperEoaAmounts
+    );
+    mergeBalanceMaps(
+        eoaMarketingAndUnlockedDxdHoldersAmountsMap,
+        swaprLpEoaAmounts
+    );
+    mergeBalanceMaps(
+        eoaMarketingAndUnlockedDxdHoldersAmountsMap,
+        halfDxdAmountEoas
+    );
+    const marketingAndUnlockedDxdHoldersAirdropEoaLeaves = buildLeaves(
+        eoaMarketingAndUnlockedDxdHoldersAmountsMap
+    );
+    exportJsonLeaves(
+        marketingAndUnlockedDxdHoldersAirdropEoaLeaves,
+        MARKETING_AND_UNLOCKED_DXD_HOLDERS_AIRDROP_EOA_JSON_LOCATION
+    );
+    const marketingAndUnlockedDxdHoldersAirdropEoatREE = new MerkleTree(
+        marketingAndUnlockedDxdHoldersAirdropEoaLeaves
+    );
+
     console.log(
-        "marketing airdrop sc root",
+        "marketing and unlocked dxd holders airdrop eoa root",
+        marketingAndUnlockedDxdHoldersAirdropEoatREE.root
+    );
+    console.log(
+        "marketing and unlocked dxd holders airdrop sc root",
         marketingAirdropSmartContractTree.root
     );
     console.log(
         `marketing airdrop required funding: ${formatEther(
-            getTotalAmountFromMap(eoaMarketingAmountsMap).add(
-                getTotalAmountFromMap(smartContractMarketingAmountsMap)
-            )
-        )}`
+            getTotalAmountFromMap(eoaMarketingAndUnlockedDxdHoldersAmountsMap)
+        )} on arbitrum (missing ${formatEther(
+            getTotalAmountFromMap(halfDxdAmountScs)
+        )} swpr that are given on mainnet to scs) and ${formatEther(
+            getTotalAmountFromMap(smartContractMarketingAmountsMap)
+        )} on mainnet`
     );
-
-    const {
-        eoas: dxdEoas,
-        mainnetSmartContracts: dxdMainnetSmartContracts,
-        xDaiSmartContracts: dxdXDaiSmartContracts,
-    } = await getWhitelistedDxdHoldersBalanceMap();
-    if (Object.keys(dxdXDaiSmartContracts).length > 0)
-        throw new Error("xdai smart contracts detected");
-    // calculating per-user amount based on balance-weighted algorithm
-    const overallMap = {
-        ...dxdEoas,
-        ...dxdMainnetSmartContracts,
-    };
-    const totalDxdAmount = [...Object.values(overallMap)].reduce(
-        (total: BigNumber, balance) => total.add(balance),
-        BigNumber.from(0)
-    );
-    const dxdAmounts = getBalanceWeightedAmountsMap(
-        parseEther("8000000"),
-        totalDxdAmount,
-        overallMap
-    );
-    const dxdLeaves = buildLeaves(dxdAmounts);
-    exportJsonLeaves(dxdLeaves, DXD_AIRDROP_JSON_LOCATION);
-    const dxdAirdropTree = new MerkleTree(dxdLeaves);
-    console.log("dxd airdrop root", dxdAirdropTree.root);
+    console.log("vested dxd mainnet airdrop root", vestedDxdAirdropTree.root);
     console.log(
-        `dxd airdrop required funding: ${formatEther(
-            getTotalAmountFromMap(dxdAmounts)
+        `vested dxd airdrop required funding: ${formatEther(
+            getTotalAmountFromMap(halfDxdAmountEoas).add(
+                getTotalAmountFromMap(halfDxdAmountScs)
+            )
         )}`
     );
 };
