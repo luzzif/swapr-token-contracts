@@ -10,6 +10,7 @@ import "./tasks/get-proof";
 import "./tasks/deploy-token";
 import "./tasks/deploy-claimer";
 import "./tasks/deploy-vested-claimer";
+import "./tasks/estimate-swpr-deployment-gas-used";
 
 config();
 

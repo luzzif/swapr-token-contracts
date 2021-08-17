@@ -18,6 +18,7 @@
         "prepare": "husky install",
         "deploy:test:rinkeby": "hardhat test-deploy --network rinkeby",
         "get-proof": "hardhat get-proof",
+        "estimate-swpr-deployment-gas-used": "hardhat estimate-swpr-deployment-gas-used",
         "deploy-token:rinkeby": "hardhat deploy-token --network rinkeby --verify",
         "deploy-token:arbitrum-one": "hardhat deploy-token --network arbitrumOne",
         "deploy-claimer:arbitrum-testnet": "hardhat deploy-claimer --network arbitrumTestnet",
