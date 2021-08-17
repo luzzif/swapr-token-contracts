@@ -12,7 +12,7 @@ import { BigNumber } from "ethers";
 import { Leaf, MerkleTree } from "../merkle-tree";
 import { formatEther, getAddress, parseEther } from "ethers/lib/utils";
 import { outputJSONSync } from "fs-extra";
-import { mergeBalanceMaps } from "./commons";
+import { logInPlace, mergeBalanceMaps } from "./commons";
 
 const MARKETING_AND_UNLOCKED_DXD_HOLDERS_AIRDROP_EOA_JSON_LOCATION = `${__dirname}/cache/marketing-and-unlocked-dxd-holders-airdrop-eoa-leaves.json`;
 const MARKETING_AIRDROP_SC_JSON_LOCATION = `${__dirname}/cache/marketing-airdrop-sc-leaves.json`;
@@ -84,6 +84,23 @@ const getTotalAmountFromMap = (map: {
         (total: BigNumber, value) => total.add(value),
         BigNumber.from(0)
     );
+};
+
+const checkForDuplicatedLeaves = (leaves: Leaf[]) => {
+    leaves.forEach((leaf, index) => {
+        const foundLeaf = leaves.find(
+            (searchedLeaf, searchedIndex) =>
+                index !== searchedIndex && // avoids triggering the error when the looked at leaf is encountered while scanning
+                searchedLeaf.account.toLowerCase() ===
+                    leaf.account.toLowerCase()
+        );
+        if (foundLeaf)
+            throw new Error(
+                `found duplicated leaf for account: ${foundLeaf.account}`
+            );
+        logInPlace(`checking for duplicates: ${index + 1}/${leaves.length}`);
+    });
+    logInPlace("");
 };
 
 const buildLeaves = (amountMap: { [address: string]: BigNumber }): Leaf[] => {
@@ -235,6 +252,7 @@ const createWhitelist = async () => {
         ...halfDxdAmountEoas,
         ...halfDxdAmountScs,
     });
+    checkForDuplicatedLeaves(vestedMainnetDxdLeaves);
     exportJsonLeaves(vestedMainnetDxdLeaves, VESTED_DXD_AIRDROP_JSON_LOCATION);
     const vestedDxdAirdropTree = new MerkleTree(vestedMainnetDxdLeaves);
 
@@ -279,6 +297,7 @@ const createWhitelist = async () => {
     const marketingAirdropSmartContractLeaves = buildLeaves(
         smartContractMarketingAmountsMap
     );
+    checkForDuplicatedLeaves(marketingAirdropSmartContractLeaves);
     exportJsonLeaves(
         marketingAirdropSmartContractLeaves,
         MARKETING_AIRDROP_SC_JSON_LOCATION
@@ -331,6 +350,7 @@ const createWhitelist = async () => {
     const marketingAndUnlockedDxdHoldersAirdropEoaLeaves = buildLeaves(
         eoaMarketingAndUnlockedDxdHoldersAmountsMap
     );
+    checkForDuplicatedLeaves(marketingAndUnlockedDxdHoldersAirdropEoaLeaves);
     exportJsonLeaves(
         marketingAndUnlockedDxdHoldersAirdropEoaLeaves,
         MARKETING_AND_UNLOCKED_DXD_HOLDERS_AIRDROP_EOA_JSON_LOCATION
