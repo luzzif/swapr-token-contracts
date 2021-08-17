@@ -1,6 +1,6 @@
 import { task } from "hardhat/config";
 import { MerkleTree } from "../merkle-tree";
-import airdropData from "../airdrop-data.json";
+import airdropData from "../whitelist-creation/cache/marketing-and-unlocked-dxd-holders-airdrop-eoa-leaves.json";
 
 interface TaskArguments {
     account: string;
