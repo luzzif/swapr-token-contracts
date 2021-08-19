@@ -38,9 +38,9 @@ export const getWhitelistDexGuruTraders = async (): Promise<{
     }
 
     const from = "2021/01/01";
-    const to = DateTime.fromSeconds(MARKETING_AIRDROP_TIME_LIMIT).toFormat(
-        "yyyy-MM-dd"
-    );
+    const to = DateTime.fromSeconds(MARKETING_AIRDROP_TIME_LIMIT, {
+        zone: "utc",
+    }).toFormat("yyyy-MM-dd");
 
     let page = 0;
     let pageCount;
