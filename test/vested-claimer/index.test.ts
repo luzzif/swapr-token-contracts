@@ -150,7 +150,7 @@ describe("SWPRVestedClaimer", () => {
                 duration,
                 cliff,
             ]
-        )) as SWPRVestedClaimer;
+        )) as unknown as SWPRVestedClaimer;
 
         await fastForwardTo(claimTimeLimit + 1);
 
@@ -178,7 +178,7 @@ describe("SWPRVestedClaimer", () => {
                 duration,
                 cliff,
             ]
-        )) as SWPRVestedClaimer;
+        )) as unknown as SWPRVestedClaimer;
         await expect(
             swprClaimer
                 .connect(claimerAccount)
@@ -213,7 +213,7 @@ describe("SWPRVestedClaimer", () => {
                 duration,
                 cliff,
             ]
-        )) as SWPRVestedClaimer;
+        )) as unknown as SWPRVestedClaimer;
 
         // funding claimer
         const initialClaimerFunding = "1100";
@@ -271,7 +271,7 @@ describe("SWPRVestedClaimer", () => {
                 duration,
                 cliff,
             ]
-        )) as SWPRVestedClaimer;
+        )) as unknown as SWPRVestedClaimer;
 
         // funding claimer
         const initialClaimerFunding = "1100";
@@ -320,7 +320,7 @@ describe("SWPRVestedClaimer", () => {
                 duration,
                 cliff,
             ]
-        )) as SWPRVestedClaimer;
+        )) as unknown as SWPRVestedClaimer;
 
         // funding claimer
         const initialClaimerFunding = "1100";
@@ -382,7 +382,7 @@ describe("SWPRVestedClaimer", () => {
                 duration,
                 cliff,
             ]
-        )) as SWPRVestedClaimer;
+        )) as unknown as SWPRVestedClaimer;
 
         // funding claimer
         const initialClaimerFunding = "1100";
@@ -438,7 +438,7 @@ describe("SWPRVestedClaimer", () => {
                 duration,
                 cliff,
             ]
-        )) as SWPRVestedClaimer;
+        )) as unknown as SWPRVestedClaimer;
 
         // funding claimer
         const initialClaimerFunding = "1100";
@@ -462,7 +462,7 @@ describe("SWPRVestedClaimer", () => {
         );
     });
 
-    it.only("should succeed when called the second time, after the vesting duration has passed (should claim all the vesting amount)", async () => {
+    it("should succeed when called the second time, after the vesting duration has passed (should claim all the vesting amount)", async () => {
         const { initialHolderAccount, claimerAccount, swpr } =
             await loadFixture(fixture);
 
@@ -489,7 +489,7 @@ describe("SWPRVestedClaimer", () => {
                 duration,
                 cliff,
             ]
-        )) as SWPRVestedClaimer;
+        )) as unknown as SWPRVestedClaimer;
 
         // funding claimer
         const initialClaimerFunding = "1100";
@@ -528,7 +528,7 @@ describe("SWPRVestedClaimer", () => {
         );
     });
 
-    it.only("should fail when recovering before the release time limit", async () => {
+    it("should fail when recovering before the release time limit", async () => {
         const startTimestamp = Math.floor(Date.now() / 1000);
         const cliff = startTimestamp + 100;
         const duration = 1000;
@@ -545,14 +545,14 @@ describe("SWPRVestedClaimer", () => {
                 duration,
                 cliff,
             ]
-        )) as SWPRVestedClaimer;
+        )) as unknown as SWPRVestedClaimer;
 
         await expect(swprClaimer.recover()).to.be.revertedWith(
             "ReleaseTimeLimitNotYetReached"
         );
     });
 
-    it.only("should succeed when recovering after the release time limit when no one claimed", async () => {
+    it("should succeed when recovering after the release time limit when no one claimed", async () => {
         const startTimestamp = Math.floor(Date.now() / 1000);
         const cliff = startTimestamp + 100;
         const duration = 1000;
@@ -571,7 +571,7 @@ describe("SWPRVestedClaimer", () => {
                 duration,
                 cliff,
             ]
-        )) as SWPRVestedClaimer;
+        )) as unknown as SWPRVestedClaimer;
         const claimerFunding = 100; // 100 wei
         await swpr
             .connect(initialHolderAccount)
@@ -583,7 +583,7 @@ describe("SWPRVestedClaimer", () => {
         expect(await swpr.balanceOf(owner.address)).to.be.equal(claimerFunding);
     });
 
-    it.only("should succeed when recovering after the claim time limit when someone claimed", async () => {
+    it("should succeed when recovering after the claim time limit when someone claimed", async () => {
         const startTimestamp = Math.floor(Date.now() / 1000);
         const cliff = startTimestamp + 100;
         const duration = 1000;
@@ -613,7 +613,7 @@ describe("SWPRVestedClaimer", () => {
                 duration,
                 cliff,
             ]
-        )) as SWPRVestedClaimer;
+        )) as unknown as SWPRVestedClaimer;
 
         // funding claimer
         const initialClaimerFunding = "1100";

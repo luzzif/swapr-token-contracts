@@ -7,7 +7,7 @@ export const fixture = async (_: any, provider: MockProvider) => {
 
     const swpr = (await deployContract(initialHolderAccount, swprJson, [
         initialHolderAccount.address,
-    ])) as SWPR;
+    ])) as unknown as SWPR;
 
     return {
         swpr,

@@ -54,7 +54,7 @@ describe("SWPRClaimer", () => {
             initialHolderAccount,
             swprClaimerJson,
             [swpr.address, formatBytes32String("fake-merkle-root"), timeLimit]
-        )) as SWPRClaimer;
+        )) as unknown as SWPRClaimer;
 
         await fastForwardTo(timeLimit + 1);
 
@@ -76,7 +76,7 @@ describe("SWPRClaimer", () => {
                 formatBytes32String("fake-merkle-root"),
                 Math.floor(Date.now() / 1000) + 1000,
             ]
-        )) as SWPRClaimer;
+        )) as unknown as SWPRClaimer;
         await expect(
             swprClaimer
                 .connect(claimerAccount)
@@ -108,7 +108,7 @@ describe("SWPRClaimer", () => {
             initialHolderAccount,
             swprClaimerJson,
             [swpr.address, tree.root, Math.floor(Date.now() / 1000) + 1000]
-        )) as SWPRClaimer;
+        )) as unknown as SWPRClaimer;
 
         // funding claimer
         const initialClaimerFunding = "1100";
@@ -154,7 +154,7 @@ describe("SWPRClaimer", () => {
             initialHolderAccount,
             swprClaimerJson,
             [swpr.address, tree.root, Math.floor(Date.now() / 1000) + 1000]
-        )) as SWPRClaimer;
+        )) as unknown as SWPRClaimer;
 
         // funding claimer
         const initialClaimerFunding = "1100";
@@ -188,7 +188,7 @@ describe("SWPRClaimer", () => {
             initialHolderAccount,
             swprClaimerJson,
             [swpr.address, formatBytes32String("fake-merkle-root"), timeLimit]
-        )) as SWPRClaimer;
+        )) as unknown as SWPRClaimer;
 
         await expect(swprClaimer.recover()).to.be.revertedWith(
             "ClaimTimeLimitNotYetReached"
@@ -204,7 +204,7 @@ describe("SWPRClaimer", () => {
             swpr.address,
             formatBytes32String("fake-merkle-root"),
             timeLimit,
-        ])) as SWPRClaimer;
+        ])) as unknown as SWPRClaimer;
         const claimerFunding = 100; // 100 wei
         await swpr
             .connect(initialHolderAccount)
@@ -236,7 +236,7 @@ describe("SWPRClaimer", () => {
             swpr.address,
             tree.root,
             timeLimit,
-        ])) as SWPRClaimer;
+        ])) as unknown as SWPRClaimer;
 
         // funding claimer
         const initialClaimerFunding = "1100";
