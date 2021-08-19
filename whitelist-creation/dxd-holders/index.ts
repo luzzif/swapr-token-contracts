@@ -64,6 +64,10 @@ const STATIC_AIRDROP_RECIPIENT_BLACKLIST = [
     "0xE5c405C5578d84c5231D3a9a29Ef4374423fA0c2", // Custodian contract
     "0xdD9f24EfC84D93deeF3c8745c837ab63E80Abd27", // Governance leftover exchanger contract (not sure what it's about)
     "0x6709a35B20211479849F70E19Bc248481a448FA5", // Random bridge contract
+    "0x43212005A9ed2Dab40b7901662965FB282664091", // Random bridge contract
+    "0x9008D19f58AAbD9eD0D60971565AA8510560ab41", // GPv2 settlement
+    "0xce0BB1a5e9c723fe189D9Bf5457DEd9b21E40f9E", // Gnosis protocol relayer
+    "0xC6130400C1e3cD7b352Db75055dB9dD554E00Ef0", // Swapr fee receiver
 
     // xDai
     "0x1bDe964eCd52429004CbC5812C07C28bEC9147e9", // Swapr ETHDXD pool
@@ -78,6 +82,8 @@ const STATIC_AIRDROP_RECIPIENT_BLACKLIST = [
     "0xA369a0b81ee984a470EA0acf41EF9DdcDB5f7B46", // Gnosis protocol relayer
     "0x65f29020d07A6CFa3B0bF63d749934d5A6E6ea18", // Swapr fee receiver
     "0x61e7864d7174d83e5771bd8e75f201d95d2110ed", // Aragon stuff
+    "0x3224f5E36a8EcC2782D2ffBAED7Ae3103F0Dd955", // Swapr liquidity relayer
+    "0xA5570b7673Ed7aB8f5CbB7a7aE9c4808BA00C00b", // Elk finance stuff
 ].map(getAddress);
 
 const getDxdTokenHoldersWithBalances = async (
