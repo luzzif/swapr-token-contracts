@@ -43,7 +43,7 @@ export const SWAPR_XDAI_SUBGRAPH_CLIENT = new GraphQLClient(
 );
 
 export const SNAPSHOT_CLIENT = new GraphQLClient(
-    "https://hub.snapshot.page/graphql"
+    "https://hub.snapshot.org/graphql"
 );
 
 export const POAP_XDAI_SUBGRAPH_CLIENT = new GraphQLClient(
@@ -68,8 +68,8 @@ export const XDAI_PROVIDER = new ethers.providers.JsonRpcProvider(
 export const MARKETING_AIRDROP_TIME_LIMIT = 1625097600; // Jul-01-2021 12:00:00 AM UTC
 export const MARKETING_AIRDROP_MAINNET_SNAPSHOT_BLOCK = 12738515; // Jul-01-2021 12:01:53 AM +UTC
 export const MARKETING_AIRDROP_XDAI_SNAPSHOT_BLOCK = 16851527; // Jul-01-2021 12:05:55 AM +UTC
-export const DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK = BigNumber.from("12738515"); // block mined on Jun-30-2021 10:00:04 PM +UTC
-export const DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK = BigNumber.from("16851527"); // block published on July-01-2021 12:07:20 AM +2 UTC
+export const DXD_AIRDROP_MAINNET_SNAPSHOT_BLOCK = BigNumber.from("13052302"); // block mined on Aug-19-2021 12:01:37 AM +UTC
+export const DXD_AIRDROP_XDAI_SNAPSHOT_BLOCK = BigNumber.from("17655301"); // block published on August-19-2021 02:00:45 AM +2 UTC
 export const DXD_MAINNET_ADDRESS = "0xa1d65E8fB6e87b60FECCBc582F7f97804B725521";
 export const DXD_XDAI_ADDRESS = "0xb90D6bec20993Be5d72A5ab353343f7a0281f158";
 export const DXD_MAINNET_MESA_TOKEN_ID = 51;
