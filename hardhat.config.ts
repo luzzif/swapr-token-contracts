@@ -11,6 +11,7 @@ import "./tasks/deploy-token";
 import "./tasks/deploy-claimer";
 import "./tasks/deploy-vested-claimer";
 import "./tasks/estimate-swpr-deployment-gas-used";
+import "./tasks/verify-deployment";
 
 config();
 
