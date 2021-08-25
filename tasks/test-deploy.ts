@@ -7,10 +7,10 @@ import {
     SWPR__factory,
 } from "../typechain";
 import { MerkleTree } from "../merkle-tree";
-import airdropData from "../airdrop-data.json";
 import { formatBytes32String } from "ethers/lib/utils";
 import { BigNumber } from "ethers";
 import { DateTime } from "luxon";
+import fs from "fs";
 
 interface TaskArguments {
     verify: boolean;
@@ -34,6 +34,16 @@ task(
             taskArguments: TaskArguments,
             hre: HardhatRuntimeEnvironment
         ) => {
+            if (
+                !fs.existsSync(
+                    "../whitelist-creation/cache/marketing-and-unlocked-dxd-holders-airdrop-eoa-leaves.json"
+                )
+            )
+                throw new Error(
+                    "no cache to read data from. Please run the create-whitelist script once"
+                );
+            const airdropData = require("../whitelist-creation/cache/marketing-and-unlocked-dxd-holders-airdrop-eoa-leaves.json");
+
             const { verify, claimerFunding } = taskArguments;
             const signer = (await hre.ethers.getSigners())[0];
             const signerAddress = await signer.getAddress();
