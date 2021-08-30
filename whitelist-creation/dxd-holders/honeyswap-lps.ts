@@ -7,7 +7,7 @@ import {
     HONEYSWAP_XDAI_SUBGRAPH_CLIENT,
 } from "../commons";
 import { Decimal } from "decimal.js-light";
-import { parseEther } from "ethers/lib/utils";
+import { getAddress, parseEther } from "ethers/lib/utils";
 
 const PAIRS_TOKEN0_QUERY = gql`
     query getPairsDxdToken0($lastId: ID) {
@@ -107,7 +107,7 @@ export const getHoneyswapDxdLiquidityProviders = async (): Promise<{
     const { positionsByToken0, positionsByToken1 } = await getSubgraphData();
 
     positionsByToken0.forEach((position) => {
-        const userAddress = position.user.address;
+        const userAddress = getAddress(position.user.address);
         const userLpTokenBalance = new Decimal(position.liquidityTokenBalance);
         const pairTotalSupply = new Decimal(position.pair.totalSupply);
         const userPoolPercentage =
@@ -121,7 +121,7 @@ export const getHoneyswapDxdLiquidityProviders = async (): Promise<{
     });
 
     positionsByToken1.forEach((position) => {
-        const userAddress = position.user.address;
+        const userAddress = getAddress(position.user.address);
         const userLpTokenBalance = new Decimal(position.liquidityTokenBalance);
         const pairTotalSupply = new Decimal(position.pair.totalSupply);
         const userPoolPercentage =

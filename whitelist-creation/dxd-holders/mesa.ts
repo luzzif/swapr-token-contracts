@@ -15,8 +15,7 @@ import {
     saveBalanceMapCache,
 } from "../commons";
 import batchExchangeAbi from "./abis/batch-exchange.json";
-import fs from "fs";
-import { outputJSONSync } from "fs-extra";
+import { getAddress } from "ethers/lib/utils";
 
 const MAINNET_CACHE_LOCATION = `${__dirname}/cache/mesa-mainnet.json`;
 const XDAI_CACHE_LOCATION = `${__dirname}/cache/mesa-xdai.json`;
@@ -192,7 +191,7 @@ const getMesaBalances = async (
                 accumulator: { [address: string]: BigNumber },
                 [address, balance]
             ) => {
-                accumulator[address] = balance;
+                accumulator[getAddress(address)] = balance;
                 return accumulator;
             },
             {}

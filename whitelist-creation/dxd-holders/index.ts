@@ -139,7 +139,7 @@ const getDxdTokenHoldersWithBalances = async (
                 accumulator: { [address: string]: BigNumber },
                 [address, balance]
             ) => {
-                accumulator[address] = balance;
+                accumulator[getAddress(address)] = balance;
                 return accumulator;
             },
             {}
@@ -174,7 +174,7 @@ const getMainnetDxdVestingContractAddresses = async () => {
         );
 
         events.forEach((event) => {
-            vestingContractAddresses.add(event.args![0] as string);
+            vestingContractAddresses.add(getAddress(event.args![0] as string));
         });
 
         lastAnalyzedBlock = toBlock;
@@ -305,6 +305,7 @@ export const getWhitelistedDxdHoldersBalanceMap = async (): Promise<{
     // get a cross-chain balances map
     const crossChainBalanceMap = allMainnetHolders;
     mergeBalanceMaps(crossChainBalanceMap, allXDaiHolders);
+
     // filter out accounts that hold less than the minimum threshold and/or are blacklisted
     const eligibleAddressesMap = Object.entries(crossChainBalanceMap).reduce(
         (accumulator: { [address: string]: BigNumber }, [address, balance]) => {

@@ -1,6 +1,6 @@
 import Decimal from "decimal.js-light";
 import { BigNumber } from "ethers";
-import { parseEther } from "ethers/lib/utils";
+import { getAddress, parseEther } from "ethers/lib/utils";
 import { gql } from "graphql-request";
 import {
     BALANCER_MAINNET_SUBGRAPH_CLIENT,
@@ -76,7 +76,7 @@ export const getBalancerDxdLiquidityProviders = async () => {
 
     const liquidityProviders = await getSubgraphData();
     liquidityProviders.forEach((position) => {
-        const userAddress = position.userAddress.id;
+        const userAddress = getAddress(position.userAddress.id);
         const userLpTokenBalance = new Decimal(position.balance);
         const pairTotalSupply = new Decimal(position.poolId.totalShares);
         const userPoolPercentage =

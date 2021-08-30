@@ -1,4 +1,5 @@
 import { BigNumber } from "ethers";
+import { getAddress } from "ethers/lib/utils";
 import { gql } from "graphql-request";
 import {
     LOOPRING_EXCHANGE_V2_SUBGRAPH_CLIENT,
@@ -41,7 +42,9 @@ export const getLoopringDxdHolders = async () => {
 
     const holders = await getSubgraphData();
     holders.forEach((holder) => {
-        balanceMap[holder.address] = BigNumber.from(holder.balances[0].balance); // balance is in wei, no need to parse
+        balanceMap[getAddress(holder.address)] = BigNumber.from(
+            holder.balances[0].balance
+        ); // balance is in wei, no need to parse
     });
 
     return balanceMap;

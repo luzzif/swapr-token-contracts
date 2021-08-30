@@ -186,7 +186,7 @@ const getBalanceMap = (
     const balanceMap: { [address: string]: BigNumber } = {};
 
     positionsByToken0.forEach((position) => {
-        const userAddress = position.user.address;
+        const userAddress = getAddress(position.user.address);
         const userLpTokenBalance = new Decimal(position.liquidityTokenBalance);
         const pairTotalSupply = new Decimal(position.pair.totalSupply);
         const userPoolPercentage =
@@ -200,7 +200,7 @@ const getBalanceMap = (
     });
 
     positionsByToken1.forEach((position) => {
-        const userAddress = position.user.address;
+        const userAddress = getAddress(position.user.address);
         const userLpTokenBalance = new Decimal(position.liquidityTokenBalance);
         const pairTotalSupply = new Decimal(position.pair.totalSupply);
         const userPoolPercentage =
