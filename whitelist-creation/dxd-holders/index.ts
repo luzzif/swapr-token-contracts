@@ -298,6 +298,7 @@ export const getWhitelistedDxdHoldersBalanceMap = async (): Promise<{
             .filter(([address]) => blacklist.indexOf(getAddress(address)) < 0)
             .map(([address]) => getAddress(address))
     );
+
     // separate eoas from smart contracts for non-blacklisted addresses
     const { smartContracts: rawMainnetSmartContracts, eoas: rawMainnetEoas } =
         await getEoaAddresses(notOnBlacklistMainnetAddresses, MAINNET_PROVIDER);
