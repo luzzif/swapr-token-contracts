@@ -10,9 +10,15 @@ import { getWhitelistXSdtHolders } from "./xsdt-holders";
 import { getWhitelist1InchVoters } from "./1inch-governance-voters";
 import { BigNumber } from "ethers";
 import { Leaf, MerkleTree } from "../merkle-tree";
-import { formatEther, getAddress, parseEther } from "ethers/lib/utils";
+import {
+    formatEther,
+    formatUnits,
+    getAddress,
+    parseEther,
+} from "ethers/lib/utils";
 import { outputJSONSync } from "fs-extra";
 import { logInPlace, mergeBalanceMaps } from "./commons";
+import Decimal from "decimal.js-light";
 
 const MARKETING_AND_UNLOCKED_DXD_HOLDERS_AIRDROP_EOA_JSON_LOCATION = `${__dirname}/cache/marketing-and-unlocked-dxd-holders-airdrop-eoa-leaves.json`;
 const MARKETING_AIRDROP_SC_JSON_LOCATION = `${__dirname}/cache/marketing-airdrop-sc-leaves.json`;
@@ -108,6 +114,100 @@ const buildLeaves = (amountMap: { [address: string]: BigNumber }): Leaf[] => {
         account: getAddress(account),
         amount: amount.toString(),
     }));
+};
+
+const adjustWhitelist = (outputWhitelist: Leaf[], inputWhitelist: Leaf[]) => {
+    inputWhitelist.forEach((leaf) => {
+        const index = outputWhitelist.findIndex(
+            (innerLeaf) =>
+                innerLeaf.account.toLowerCase() === leaf.account.toLowerCase()
+        );
+        if (index === -1) outputWhitelist.push(leaf);
+        else outputWhitelist[index] = leaf;
+    });
+};
+
+const adjustVestedWhitelist = (
+    outputWhitelist: Leaf[],
+    inputWhitelist: Leaf[]
+) => {
+    inputWhitelist.forEach((leaf) => {
+        const index = outputWhitelist.findIndex(
+            (innerLeaf) =>
+                innerLeaf.account.toLowerCase() === leaf.account.toLowerCase()
+        );
+        if (index === -1) outputWhitelist.push(leaf);
+        else
+            outputWhitelist[index] = {
+                ...outputWhitelist[index],
+                amount: formatUnits(
+                    BigNumber.from(outputWhitelist[index].amount).sub(
+                        leaf.amount
+                    ),
+                    "wei"
+                ),
+            };
+    });
+};
+
+const getTotalSwprAmountInWhitelist = (whitelist: Leaf[]) => {
+    return Object.values(whitelist).reduce(
+        (accumulator: BigNumber, leaf) =>
+            accumulator.add(BigNumber.from(leaf.amount)),
+        BigNumber.from(0)
+    );
+};
+
+const getAdjustedSwprAmounts = (
+    wrongWhitelist: Leaf[],
+    correctWhitelist: Leaf[]
+) => {
+    return wrongWhitelist.reduce(
+        (
+            accumulator: {
+                address: string;
+                percentage: Decimal;
+                newAmount: BigNumber;
+                addedAmount: BigNumber;
+            }[],
+            leaf
+        ) => {
+            const rightBalanceForAccount = correctWhitelist.find(
+                (rightLeaf) => rightLeaf.account === leaf.account
+            );
+            if (!!!rightBalanceForAccount) throw new Error("no leaf found");
+
+            const percentageChange = new Decimal(leaf.amount)
+                .minus(rightBalanceForAccount.amount)
+                .dividedBy(rightBalanceForAccount.amount)
+                .times(100);
+            let newAmount = BigNumber.from(rightBalanceForAccount.amount);
+            let addedAmount = BigNumber.from(0);
+
+            // handle those that got more
+            if (
+                !percentageChange.isZero() &&
+                Number(percentageChange.toFixed(8)) < 7.115437455
+            ) {
+                newAmount = newAmount.add(
+                    BigNumber.from(rightBalanceForAccount.amount)
+                        .mul(711543746)
+                        .div(10000000000)
+                );
+                addedAmount = newAmount.sub(leaf.amount);
+            }
+            if (addedAmount.gt(0)) {
+                accumulator.push({
+                    address: leaf.account,
+                    percentage: percentageChange,
+                    newAmount,
+                    addedAmount,
+                });
+            }
+            return accumulator;
+        },
+        []
+    );
 };
 
 const createWhitelist = async () => {
@@ -238,6 +338,7 @@ const createWhitelist = async () => {
         (total: BigNumber, balance) => total.add(balance),
         BigNumber.from(0)
     );
+
     // this map only represents half of the SWPR amount each DXD holder must get.
     // This is because half will be given out immediately, alongside the marketing airdrop,
     // while the other half will be vested for 2 years on mainnet.
@@ -370,9 +471,7 @@ const createWhitelist = async () => {
     console.log(
         `marketing airdrop required funding: ${formatEther(
             getTotalAmountFromMap(eoaMarketingAndUnlockedDxdHoldersAmountsMap)
-        )} on arbitrum (missing ${formatEther(
-            getTotalAmountFromMap(halfDxdAmountScs)
-        )} swpr that are given on mainnet to scs) and ${formatEther(
+        )} on arbitrum and ${formatEther(
             getTotalAmountFromMap(smartContractMarketingAmountsMap)
         )} on mainnet`
     );
@@ -383,6 +482,156 @@ const createWhitelist = async () => {
                 getTotalAmountFromMap(halfDxdAmountScs)
             )
         )}`
+    );
+
+    const wrongEoaLeaves =
+        require(`${__dirname}/cache/old-and-wrong/marketing-and-unlocked-dxd-holders-airdrop-eoa-leaves.json`) as Leaf[];
+    const wrongScLeaves =
+        require(`${__dirname}/cache/old-and-wrong/marketing-airdrop-sc-leaves.json`) as Leaf[];
+
+    const adjustedEoaWhitelist: Leaf[] = [];
+    adjustWhitelist(adjustedEoaWhitelist, wrongEoaLeaves);
+    const adjustedScWhitelist: Leaf[] = [];
+    adjustWhitelist(adjustedScWhitelist, wrongScLeaves);
+    const adjustedVestedWhitelist: Leaf[] = [];
+    adjustWhitelist(adjustedVestedWhitelist, vestedMainnetDxdLeaves);
+
+    // calculate how much SWPR to give out to people that got more, but still less than 6.64% more
+    const eoaAdjustments = getAdjustedSwprAmounts(
+        wrongEoaLeaves,
+        marketingAndUnlockedDxdHoldersAirdropEoaLeaves
+    ).sort((a, b) =>
+        a.percentage.lt(b.percentage)
+            ? -1
+            : a.percentage.eq(b.percentage)
+            ? 0
+            : 1
+    );
+
+    // logging out adjustments
+    eoaAdjustments.forEach((item) => {
+        console.log(
+            `${item.address}: ${item.percentage.toFixed(8)}% - +${formatEther(
+                item.addedAmount
+            )} SWPR`
+        );
+    });
+    console.log();
+
+    adjustWhitelist(
+        adjustedEoaWhitelist,
+        eoaAdjustments.map((item) => {
+            return {
+                account: getAddress(item.address),
+                amount: formatUnits(item.newAmount, "wei"),
+            };
+        })
+    );
+
+    const wrongEoasSwprAmount = getTotalSwprAmountInWhitelist(wrongEoaLeaves);
+    console.log(
+        "Wrong SWPR amount given out to EOAs:",
+        formatEther(wrongEoasSwprAmount)
+    );
+    const adjustedEoasSwprAmount =
+        getTotalSwprAmountInWhitelist(adjustedEoaWhitelist);
+    console.log(
+        "Adjusted SWPR amount given out to EOAs:",
+        formatEther(adjustedEoasSwprAmount)
+    );
+    console.log(
+        "Extra SWPR to give out to EOAs:",
+        formatEther(adjustedEoasSwprAmount.sub(wrongEoasSwprAmount))
+    );
+
+    console.log();
+
+    // calculate how much SWPR to give out to people that got more, but still less than 6.64% more
+    const scAdjustments = getAdjustedSwprAmounts(
+        wrongScLeaves,
+        marketingAirdropSmartContractLeaves
+    ).sort((a, b) =>
+        a.percentage.lt(b.percentage)
+            ? -1
+            : a.percentage.eq(b.percentage)
+            ? 0
+            : 1
+    );
+
+    // logging out adjustments
+    scAdjustments.forEach((item) => {
+        console.log(
+            `${item.address}: ${item.percentage.toFixed(8)}% - +${formatEther(
+                item.addedAmount
+            )} SWPR`
+        );
+    });
+    console.log();
+
+    adjustWhitelist(
+        adjustedScWhitelist,
+        scAdjustments.map((item) => {
+            return {
+                account: getAddress(item.address),
+                amount: formatUnits(item.newAmount, "wei"),
+            };
+        })
+    );
+
+    const wrongScsSwprAmount = getTotalSwprAmountInWhitelist(wrongScLeaves);
+    console.log(
+        "Wrong SWPR amount given out to SCs:",
+        formatEther(wrongScsSwprAmount)
+    );
+    const adjustedScsSwprAmount =
+        getTotalSwprAmountInWhitelist(adjustedScWhitelist);
+    console.log(
+        "Adjusted SWPR amount given out to SCs:",
+        formatEther(adjustedScsSwprAmount)
+    );
+    console.log(
+        "Extra SWPR to give out to SCs:",
+        formatEther(adjustedScsSwprAmount.sub(wrongScsSwprAmount))
+    );
+
+    adjustVestedWhitelist(
+        adjustedVestedWhitelist,
+        eoaAdjustments.map((item) => {
+            return {
+                account: getAddress(item.address),
+                amount: formatUnits(item.addedAmount, "wei"),
+            };
+        })
+    );
+    adjustVestedWhitelist(
+        adjustedVestedWhitelist,
+        scAdjustments.map((item) => {
+            return {
+                account: getAddress(item.address),
+                amount: formatUnits(item.addedAmount, "wei"),
+            };
+        })
+    );
+
+    const totalVestedSwprAmount = getTotalSwprAmountInWhitelist(
+        adjustedVestedWhitelist
+    );
+    console.log(
+        "Total vested SWPR after adjustments:",
+        formatEther(totalVestedSwprAmount)
+    );
+    console.log(
+        "Total unlocked SWPR after adjustments:",
+        formatEther(adjustedEoasSwprAmount.add(adjustedScsSwprAmount))
+    );
+
+    console.log(
+        "Total SWPR to give away after adjustments:",
+        formatEther(
+            adjustedEoasSwprAmount
+                .add(adjustedScsSwprAmount)
+                .add(totalVestedSwprAmount)
+        )
     );
 };
 
