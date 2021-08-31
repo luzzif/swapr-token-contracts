@@ -141,6 +141,7 @@ const getSubgraphData = async (
             )
                 .plus(stakedPosition.liquidityTokenBalance)
                 .toString();
+        else positionsByToken0.push(stakedPosition);
     }, []);
 
     const dxdPairsByToken1 = await getAllDataFromSubgraph<Pair>(
@@ -174,6 +175,7 @@ const getSubgraphData = async (
             )
                 .plus(stakedPosition.liquidityTokenBalance)
                 .toString();
+        else positionsByToken1.push(stakedPosition);
     }, []);
 
     return { positionsByToken0, positionsByToken1 };
