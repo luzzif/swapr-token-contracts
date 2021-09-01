@@ -127,7 +127,9 @@ task(
                 `Claim time limit: ${claimTimeLimit.toString()} (${DateTime.fromSeconds(
                     claimTimeLimit.toNumber(),
                     { zone: "utc" }
-                ).toFormat("dd/MM/yyyy hh:mm", { timeZone: "utc" })})`
+                )
+                    .toUTC()
+                    .toFormat("dd/MM/yyyy hh:mm")})`
             );
             console.log(
                 `SWPR balance: ${commify(

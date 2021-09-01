@@ -70,7 +70,7 @@ task(
             const swprClaimer: SWPRClaimer = await SWPRClaimer.deploy(
                 swpr.address,
                 merkleRoot,
-                DateTime.now().plus({ month: 1 }).toSeconds()
+                DateTime.now().plus({ months: 1 }).toSeconds()
             );
 
             // funding the claimer
