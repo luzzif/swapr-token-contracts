@@ -613,6 +613,17 @@ const createWhitelist = async () => {
         })
     );
 
+    console.log();
+    console.log(
+        "Total extra SWPR to give away for adjustments:",
+        formatEther(
+            adjustedScsSwprAmount
+                .sub(wrongScsSwprAmount)
+                .add(adjustedEoasSwprAmount.sub(wrongEoasSwprAmount))
+        )
+    );
+    console.log();
+
     const totalVestedSwprAmount = getTotalSwprAmountInWhitelist(
         adjustedVestedWhitelist
     );
