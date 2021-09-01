@@ -66,7 +66,7 @@ describe("SWPRVestedClaimer", () => {
 
     it("should fail when deployed with an invalid start timestamp", async () => {
         const { initialHolderAccount, swpr } = await loadFixture(fixture);
-        const startTimestamp = Math.floor(Date.now() / 1000) - 10;
+        const startTimestamp = Math.floor(Date.now() / 1000) - 10000;
         const cliff = startTimestamp + 10;
         const duration = 1000;
         await expect(
