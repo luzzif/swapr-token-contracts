@@ -24,6 +24,7 @@
         "deploy-claimer:arbitrum-testnet": "hardhat deploy-claimer --network arbitrumTestnet",
         "deploy-claimer:arbitrum-one": "hardhat deploy-claimer --network arbitrumOne",
         "deploy-vested-claimer:arbitrum-testnet": "hardhat deploy-vested-claimer --network arbitrumTestnet",
+        "deploy-distributor:arbitrum-testnet": "hardhat deploy-distributor --network arbitrumTestnet",
         "verify-deployment": "hardhat verify-deployment --network mainnet",
         "create-whitelist": "ts-node whitelist-creation",
         "cache-clean": "rimraf ./whitelist-creation/**/cache"
