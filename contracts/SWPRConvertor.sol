@@ -33,18 +33,16 @@ contract SWPRConvertor is Ownable {
 
     // Burn allowed SWPRTokenA to this SWPRConvertor and transfer SWPRTokenB to the account
     function convert(address account) external {
-        uint256 swprTokenAAllowance = IERC20(swprTokenA).allowance(account, address(this));
-        uint256 swprTokenABalance = IERC20(swprTokenA).balanceOf(account);
         
-        // Check that the SWPRTokenA allowance is enough to do the convertion
-        require(
-          swprTokenAAllowance > 0,
-          "SWPRConvertor: SWPRTokenA allowance is 0"
-          );
+        // Check that the account has SWPRTokenA balance
+        uint256 swprTokenABalance = IERC20(swprTokenA).balanceOf(account);
         require(
           swprTokenABalance > 0,
           "SWPRConvertor: SWPRTokenA balance is 0"
         );
+
+        // Check that the SWPRTokenA allowance is enough to do the convertion
+        uint256 swprTokenAAllowance = IERC20(swprTokenA).allowance(account, address(this));
         require(
           swprTokenAAllowance >= swprTokenABalance,
           "SWPRConvertor: SWPRTokenA allowance is not enough"
