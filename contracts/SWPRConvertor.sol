@@ -47,12 +47,10 @@ contract SWPRConvertor is Ownable {
         );
         
         // Burn SWPRTokenA
-        SWPR(swprTokenA).transferFrom(
+        SWPR(swprTokenA).burnFrom(
             account,
-            address(this),
             swprTokenABalance
         );
-        SWPR(swprTokenA).burn(swprTokenABalance);
         
         // Transfer the SWPRTokenB to the account
         SWPR(swprTokenB).transfer(account, swprTokenABalance);
