@@ -76,9 +76,26 @@ describe("SWPRConvertor", () => {
         
         await swprB.connect(initialHolderAccountB).transfer(swprConvertor.address, "1000");
         expect(await swprB.balanceOf(swprConvertor.address)).to.be.equal("1000");
-
-        await swprA.connect(claimerAccount).approve(swprConvertor.address, "100");
         
+        // No allowance done
+        await expect(
+            swprConvertor.connect(initialHolderAccountB).convert(claimerAccount.address)
+        ).to.be.revertedWith("SWPRConvertor: SWPRTokenA allowance is not enough");
+        
+        // Not enough allowance
+        await swprA.connect(claimerAccount).approve(swprConvertor.address, "90");
+        await expect(
+            swprConvertor.connect(initialHolderAccountB).convert(claimerAccount.address)
+        ).to.be.revertedWith("SWPRConvertor: SWPRTokenA allowance is not enough");
+        
+        // Not SWPRTokenA holder
+        const noTokenHolder = wallets[7];
+        await expect(
+          swprConvertor.connect(initialHolderAccountB).convert(noTokenHolder.address)
+        ).to.be.revertedWith("SWPRConvertor: SWPRTokenA balance is 0");
+
+        // Do the right allowance and convert
+        await swprA.connect(claimerAccount).approve(swprConvertor.address, "100");
         await swprConvertor.connect(initialHolderAccountB).convert(claimerAccount.address);
         expect(await swprB.balanceOf(swprConvertor.address)).to.be.equal("900");
 
@@ -86,4 +103,5 @@ describe("SWPRConvertor", () => {
         expect(await swprA.balanceOf(claimerAccount.address)).to.be.equal("0");
         expect(await swprB.balanceOf(claimerAccount.address)).to.be.equal("100");
     });
+
 });
