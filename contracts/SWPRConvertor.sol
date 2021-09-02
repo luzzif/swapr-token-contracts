@@ -1,6 +1,7 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./SWPR.sol";
 
 error ZeroAddressInput();
@@ -17,7 +18,7 @@ error InconsistentArrayLengths();
  * @author Augusto Lemble - <augustolemble@pm.me>
  * SPDX-License-Identifier: GPL-3.0
  */
-contract SWPRConvertor is Ownable {
+contract SWPRConvertor is Ownable, ReentrancyGuard {
 
     address public swprTokenA;
     address public swprTokenB;
@@ -30,7 +31,7 @@ contract SWPRConvertor is Ownable {
     }
 
     // Burn allowed SWPRTokenA to this SWPRConvertor and transfer SWPRTokenB to the account
-    function convert(address account) external {
+    function convert(address account) nonReentrant external {
         
         // Check that the account has SWPRTokenA balance
         uint256 swprTokenABalance = SWPR(swprTokenA).balanceOf(account);
