@@ -15,3 +15,16 @@ export const fixture = async (_: any, provider: MockProvider) => {
         claimerAccount,
     };
 };
+
+export const fixtureOnlyToken = async (_: any, provider: MockProvider) => {
+    const initialHolderAccount = provider.getWallets()[9];
+
+    const swpr = (await deployContract(initialHolderAccount, swprJson, [
+        initialHolderAccount.address,
+    ])) as unknown as SWPR;
+
+    return {
+        swpr,
+        initialHolderAccount,
+    };
+};
