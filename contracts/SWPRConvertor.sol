@@ -1,8 +1,7 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./SWPR.sol";
 
 error ZeroAddressInput();
 error InconsistentArrayLengths();
@@ -19,7 +18,6 @@ error InconsistentArrayLengths();
  * SPDX-License-Identifier: GPL-3.0
  */
 contract SWPRConvertor is Ownable {
-    using SafeERC20 for IERC20;
 
     address public swprTokenA;
     address public swprTokenB;
@@ -35,35 +33,36 @@ contract SWPRConvertor is Ownable {
     function convert(address account) external {
         
         // Check that the account has SWPRTokenA balance
-        uint256 swprTokenABalance = IERC20(swprTokenA).balanceOf(account);
+        uint256 swprTokenABalance = SWPR(swprTokenA).balanceOf(account);
         require(
           swprTokenABalance > 0,
           "SWPRConvertor: SWPRTokenA balance is 0"
         );
 
         // Check that the SWPRTokenA allowance is enough to do the convertion
-        uint256 swprTokenAAllowance = IERC20(swprTokenA).allowance(account, address(this));
+        uint256 swprTokenAAllowance = SWPR(swprTokenA).allowance(account, address(this));
         require(
           swprTokenAAllowance >= swprTokenABalance,
           "SWPRConvertor: SWPRTokenA allowance is not enough"
         );
         
-        // Burn SWPRTokenA by sending them to address(1)
-        IERC20(swprTokenA).safeTransferFrom(
+        // Burn SWPRTokenA
+        SWPR(swprTokenA).transferFrom(
             account,
-            address(1),
+            address(this),
             swprTokenABalance
         );
+        SWPR(swprTokenA).burn(swprTokenABalance);
         
         // Transfer the SWPRTokenB to the account
-        IERC20(swprTokenB).safeTransfer(account, swprTokenABalance);
+        SWPR(swprTokenB).transfer(account, swprTokenABalance);
     }
 
     // Transfer the SWPRTokenB balance from the SWPRConvertor to the owner
     function recover() external {
-        IERC20(swprTokenB).safeTransfer(
+        SWPR(swprTokenB).transfer(
             owner(),
-            IERC20(swprTokenB).balanceOf(address(this))
+            SWPR(swprTokenB).balanceOf(address(this))
         );
     }
 }
