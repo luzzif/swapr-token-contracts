@@ -16,7 +16,6 @@
         "test:gasreport": "cross-env GAS_REPORT_ENABLED=true hardhat test",
         "compile": "hardhat compile",
         "prepare": "husky install",
-        "deploy:test:rinkeby": "hardhat test-deploy --network rinkeby",
         "get-proof": "hardhat get-proof",
         "typechain": "typechain --out-dir=typechain --target=ethers-v5 './artifacts/contracts/**/!(*.dbg).json'",
         "estimate-swpr-deployment-gas-used": "hardhat estimate-swpr-deployment-gas-used",
