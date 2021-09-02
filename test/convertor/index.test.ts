@@ -94,10 +94,17 @@ describe("SWPRConvertor", () => {
           swprConvertor.connect(initialHolderAccountB).convert(noTokenHolder.address)
         ).to.be.revertedWith("SWPRConvertor: SWPRTokenA balance is 0");
 
+        const swprATotalSupplyBeforeConvert = await swprA.totalSupply();
+
         // Do the right allowance and convert
         await swprA.connect(claimerAccount).approve(swprConvertor.address, "100");
         await swprConvertor.connect(initialHolderAccountB).convert(claimerAccount.address);
         expect(await swprB.balanceOf(swprConvertor.address)).to.be.equal("900");
+        
+        // Check that SWPRTokenA was burned
+        expect(await swprA.totalSupply()).to.be.equal(
+            BigNumber.from(swprATotalSupplyBeforeConvert).sub(100)
+        );
 
         // Check final balance of claimer
         expect(await swprA.balanceOf(claimerAccount.address)).to.be.equal("0");
