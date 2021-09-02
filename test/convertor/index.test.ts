@@ -80,13 +80,13 @@ describe("SWPRConvertor", () => {
         // No allowance done
         await expect(
             swprConvertor.connect(initialHolderAccountB).convert(claimerAccount.address)
-        ).to.be.revertedWith("SWPRConvertor: SWPRTokenA allowance is not enough");
+        ).to.be.revertedWith("ERC20: burn amount exceeds allowance");
         
         // Not enough allowance
         await swprA.connect(claimerAccount).approve(swprConvertor.address, "90");
         await expect(
             swprConvertor.connect(initialHolderAccountB).convert(claimerAccount.address)
-        ).to.be.revertedWith("SWPRConvertor: SWPRTokenA allowance is not enough");
+        ).to.be.revertedWith("ERC20: burn amount exceeds allowance");
         
         // Not SWPRTokenA holder
         const noTokenHolder = wallets[7];

@@ -39,13 +39,6 @@ contract SWPRConvertor is Ownable {
           "SWPRConvertor: SWPRTokenA balance is 0"
         );
 
-        // Check that the SWPRTokenA allowance is enough to do the convertion
-        uint256 swprTokenAAllowance = SWPR(swprTokenA).allowance(account, address(this));
-        require(
-          swprTokenAAllowance >= swprTokenABalance,
-          "SWPRConvertor: SWPRTokenA allowance is not enough"
-        );
-        
         // Burn SWPRTokenA
         SWPR(swprTokenA).burnFrom(
             account,
