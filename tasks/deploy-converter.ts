@@ -3,8 +3,8 @@ import { task } from "hardhat/config";
 import {
     SWPRClaimer,
     SWPRClaimer__factory,
-    SWPRConvertor,
-    SWPRConvertor__factory,
+    SWPRConverter,
+    SWPRConverter__factory,
 } from "../typechain";
 
 interface TaskArguments {
@@ -32,9 +32,9 @@ task("deploy-converter", "Deploys the converter contract")
 
             // deploying the claimer
             const SWPRConverter = (await hre.ethers.getContractFactory(
-                "SWPRConvertor"
-            )) as SWPRConvertor__factory;
-            const swprConverter: SWPRConvertor = await SWPRConverter.deploy(
+                "SWPRConverter"
+            )) as SWPRConverter__factory;
+            const swprConverter = await SWPRConverter.deploy(
                 oldSwprAddress,
                 newSwprAddress
             );
@@ -45,7 +45,7 @@ task("deploy-converter", "Deploys the converter contract")
                     setTimeout(resolve, 60000, []);
                 });
                 await hre.run("verify", {
-                    contract: "contracts/SWPRConvertor.sol:SWPRConvertor",
+                    contract: "contracts/SWPRConverter.sol:SWPRConverter",
                     address: swprConverter.address,
                     constructorArgsParams: [oldSwprAddress, newSwprAddress],
                 });

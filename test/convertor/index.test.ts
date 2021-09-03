@@ -1,26 +1,27 @@
 import { expect, use } from "chai";
-import { formatBytes32String } from "ethers/lib/utils";
 import { waffle } from "hardhat";
 import { BigNumber, constants, Wallet } from "ethers";
 import { fixture, fixtureOnlyToken } from "../fixtures";
 import { deployContract } from "ethereum-waffle";
 import { SWPRClaimer } from "../../typechain";
-import { SWPRConvertor } from "../../typechain";
+import { SWPRConverter } from "../../typechain";
 import swprClaimerJson from "../../artifacts/contracts/SWPRClaimer.sol/SWPRClaimer.json";
-import swprConvertorJson from "../../artifacts/contracts/SWPRConvertor.sol/SWPRConvertor.json";
+import swprConverterJson from "../../artifacts/contracts/SWPRConverter.sol/SWPRConverter.json";
 import { MerkleTree } from "../../merkle-tree";
 import { fastForwardTo } from "../utils";
 
 const { solidity, loadFixture } = waffle;
 use(solidity);
 
-describe("SWPRConvertor", () => {
-
+describe("SWPRConverter", () => {
     it("should succeed converting", async () => {
         const timeLimit = Math.floor(Date.now() / 1000) + 1000;
 
-        const { initialHolderAccount: initialHolderAccountA, claimerAccount, swpr: swprA } =
-            await loadFixture(fixture);
+        const {
+            initialHolderAccount: initialHolderAccountA,
+            claimerAccount,
+            swpr: swprA,
+        } = await loadFixture(fixture);
         const claimerAddress = await claimerAccount.getAddress();
         const leaves = [
             { account: claimerAddress, amount: "100" },
@@ -61,46 +62,64 @@ describe("SWPRConvertor", () => {
         expect(await swprA.balanceOf(owner.address)).to.be.equal(
             BigNumber.from(initialClaimerFunding).sub(100) // 100 was claimed
         );
-        
-        expect(await swprA.balanceOf(claimerAccount.address)).to.be.equal("100");
-        
+
+        expect(await swprA.balanceOf(claimerAccount.address)).to.be.equal(
+            "100"
+        );
+
         // deploy SWPRTokenB
         const { initialHolderAccount: initialHolderAccountB, swpr: swprB } =
             await loadFixture(fixtureOnlyToken);
-        
-        // deploy convertor
-        const swprConvertor = (await deployContract(owner, swprConvertorJson, [
+
+        // deploy converter
+        const swprConverter = (await deployContract(owner, swprConverterJson, [
             swprA.address,
-            swprB.address
-        ])) as unknown as SWPRConvertor;
-        
-        await swprB.connect(initialHolderAccountB).transfer(swprConvertor.address, "1000");
-        expect(await swprB.balanceOf(swprConvertor.address)).to.be.equal("1000");
-        
+            swprB.address,
+        ])) as unknown as SWPRConverter;
+
+        await swprB
+            .connect(initialHolderAccountB)
+            .transfer(swprConverter.address, "1000");
+        expect(await swprB.balanceOf(swprConverter.address)).to.be.equal(
+            "1000"
+        );
+
         // No allowance done
         await expect(
-            swprConvertor.connect(initialHolderAccountB).convert(claimerAccount.address)
+            swprConverter
+                .connect(initialHolderAccountB)
+                .convert(claimerAccount.address)
         ).to.be.revertedWith("ERC20: burn amount exceeds allowance");
-        
+
         // Not enough allowance
-        await swprA.connect(claimerAccount).approve(swprConvertor.address, "90");
+        await swprA
+            .connect(claimerAccount)
+            .approve(swprConverter.address, "90");
         await expect(
-            swprConvertor.connect(initialHolderAccountB).convert(claimerAccount.address)
+            swprConverter
+                .connect(initialHolderAccountB)
+                .convert(claimerAccount.address)
         ).to.be.revertedWith("ERC20: burn amount exceeds allowance");
-        
+
         // Not SWPRTokenA holder
         const noTokenHolder = wallets[7];
         await expect(
-          swprConvertor.connect(initialHolderAccountB).convert(noTokenHolder.address)
-        ).to.be.revertedWith("SWPRConvertor: SWPRTokenA balance is 0");
+            swprConverter
+                .connect(initialHolderAccountB)
+                .convert(noTokenHolder.address)
+        ).to.be.revertedWith("NothingToConvert");
 
         const swprATotalSupplyBeforeConvert = await swprA.totalSupply();
 
         // Do the right allowance and convert
-        await swprA.connect(claimerAccount).approve(swprConvertor.address, "100");
-        await swprConvertor.connect(initialHolderAccountB).convert(claimerAccount.address);
-        expect(await swprB.balanceOf(swprConvertor.address)).to.be.equal("900");
-        
+        await swprA
+            .connect(claimerAccount)
+            .approve(swprConverter.address, "100");
+        await swprConverter
+            .connect(initialHolderAccountB)
+            .convert(claimerAccount.address);
+        expect(await swprB.balanceOf(swprConverter.address)).to.be.equal("900");
+
         // Check that SWPRTokenA was burned
         expect(await swprA.totalSupply()).to.be.equal(
             BigNumber.from(swprATotalSupplyBeforeConvert).sub(100)
@@ -108,7 +127,8 @@ describe("SWPRConvertor", () => {
 
         // Check final balance of claimer
         expect(await swprA.balanceOf(claimerAccount.address)).to.be.equal("0");
-        expect(await swprB.balanceOf(claimerAccount.address)).to.be.equal("100");
+        expect(await swprB.balanceOf(claimerAccount.address)).to.be.equal(
+            "100"
+        );
     });
-
 });
