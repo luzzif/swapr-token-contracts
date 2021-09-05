@@ -1,6 +1,6 @@
 import { expect, use } from "chai";
 import { waffle } from "hardhat";
-import { BigNumber, constants, Wallet } from "ethers";
+import { BigNumber, Wallet } from "ethers";
 import { fixture, fixtureOnlyToken } from "../fixtures";
 import { deployContract } from "ethereum-waffle";
 import { SWPRClaimer } from "../../typechain";
@@ -89,7 +89,7 @@ describe("SWPRConverter", () => {
             swprConverter
                 .connect(initialHolderAccountB)
                 .convert(claimerAccount.address)
-        ).to.be.revertedWith("ERC20: burn amount exceeds allowance");
+        ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
 
         // Not enough allowance
         await swprA
@@ -99,7 +99,7 @@ describe("SWPRConverter", () => {
             swprConverter
                 .connect(initialHolderAccountB)
                 .convert(claimerAccount.address)
-        ).to.be.revertedWith("ERC20: burn amount exceeds allowance");
+        ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
 
         // Not SWPRTokenA holder
         const noTokenHolder = wallets[7];
@@ -108,8 +108,6 @@ describe("SWPRConverter", () => {
                 .connect(initialHolderAccountB)
                 .convert(noTokenHolder.address)
         ).to.be.revertedWith("NothingToConvert");
-
-        const swprATotalSupplyBeforeConvert = await swprA.totalSupply();
 
         // Do the right allowance and convert
         await swprA
@@ -120,10 +118,8 @@ describe("SWPRConverter", () => {
             .convert(claimerAccount.address);
         expect(await swprB.balanceOf(swprConverter.address)).to.be.equal("900");
 
-        // Check that SWPRTokenA was burned
-        expect(await swprA.totalSupply()).to.be.equal(
-            BigNumber.from(swprATotalSupplyBeforeConvert).sub(100)
-        );
+        // Check that SWPRTokenA was transferred to the converter
+        expect(await swprA.balanceOf(swprConverter.address)).to.be.equal("100");
 
         // Check final balance of claimer
         expect(await swprA.balanceOf(claimerAccount.address)).to.be.equal("0");

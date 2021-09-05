@@ -2,7 +2,7 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./SWPR.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 error ZeroAddressInput();
 error InconsistentArrayLengths();
@@ -35,23 +35,26 @@ contract SWPRConverter is Ownable, ReentrancyGuard {
     // Burn allowed SWPRTokenA to this SWPRConverter and transfer SWPRTokenB to the account
     function convert(address account) external nonReentrant {
         // Check that the account has SWPRTokenA balance
-        uint256 swprTokenABalance = SWPR(swprTokenA).balanceOf(account);
+        uint256 swprTokenABalance = IERC20(swprTokenA).balanceOf(account);
         if (swprTokenABalance == 0) revert NothingToConvert();
 
-        // Burn SWPRTokenA
-        SWPR(swprTokenA).burnFrom(account, swprTokenABalance);
+        IERC20(swprTokenA).transferFrom(
+            account,
+            address(this),
+            swprTokenABalance
+        );
 
         // Transfer the SWPRTokenB to the account
-        SWPR(swprTokenB).transfer(account, swprTokenABalance);
+        IERC20(swprTokenB).transfer(account, swprTokenABalance);
 
         emit Convert(account, swprTokenABalance);
     }
 
     // Transfer the SWPRTokenB balance from the SWPRConverter to the owner
     function recover() external onlyOwner {
-        SWPR(swprTokenB).transfer(
+        IERC20(swprTokenB).transfer(
             owner(),
-            SWPR(swprTokenB).balanceOf(address(this))
+            IERC20(swprTokenB).balanceOf(address(this))
         );
     }
 }
