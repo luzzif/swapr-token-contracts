@@ -5,12 +5,12 @@ import "hardhat-gas-reporter";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
+import "hardhat-dependency-compiler";
 import "./tasks/test-deploy";
 import "./tasks/get-proof";
 import "./tasks/deploy-token";
 import "./tasks/deploy-claimer";
 import "./tasks/deploy-vested-claimer";
-import "./tasks/estimate-swpr-deployment-gas-used";
 import "./tasks/verify-deployment";
 import "./tasks/deploy-distributor";
 import "./tasks/deploy-converter";
@@ -64,6 +64,12 @@ const hardhatConfig: HardhatUserConfig = {
     },
     etherscan: {
         apiKey: process.env.ETHERSCAN_API_KEY,
+    },
+    dependencyCompiler: {
+        paths: [
+            "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol",
+            "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol",
+        ],
     },
 };
 

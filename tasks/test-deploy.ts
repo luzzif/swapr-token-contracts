@@ -61,7 +61,9 @@ task(
             const SWPR = (await hre.ethers.getContractFactory(
                 "SWPR"
             )) as SWPR__factory;
-            const swpr: SWPR = await SWPR.deploy(signerAddress);
+            // FIXME: this doesn't make much sense probably, the token is
+            // intended to be deployed behind a proxy
+            const swpr: SWPR = await SWPR.deploy();
 
             // deploying the claimer
             const SWPRClaimer = (await hre.ethers.getContractFactory(
